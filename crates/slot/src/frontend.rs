@@ -1005,7 +1005,7 @@ impl Frontend {
         // The open cart's parts that never change: each socket, the chip seated in each, the
         // blank chip in flight and its shadow, in `Core::ALL` order. Baked ahead of the picker
         // so the first frame of a lid coming off is not spent in a rasteriser.
-        let sockets = slot_store::Core::ALL
+        let sockets = slot_store::Core::GBA_PICKER
             .iter()
             .map(|c| {
                 let f = socket_face(*c);
