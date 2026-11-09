@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build:
     name: Build ${{ matrix.language }} release package
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -49,14 +49,9 @@ jobs:
             slot/work/rg353ps/cargo-registry
             slot/work/rg353ps/cargo-git
             slot/work/rg353ps/cargo-target
-          key: rg353ps-native-640-cargo-${{ runner.os }}-${{ hashFiles('slot/Cargo.lock', 'slot/rust-toolchain.toml') }}
+          key: rg353ps-native-640-cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('slot/Cargo.lock', 'slot/rust-toolchain.toml') }}
           restore-keys: |
             rg353ps-native-640-cargo-${{ runner.os }}-
-
-      - name: Enable AArch64 container execution
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
 
       - name: Build language-specific release ZIP
         env:
@@ -83,7 +78,7 @@ jobs:
   publish:
     name: Publish paired Chinese and English packages
     needs: build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Download both language packages
         uses: actions/download-artifact@v4
