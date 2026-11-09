@@ -24,6 +24,11 @@ cores and creates a prerelease containing:
 - slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip
 - the adjacent .sha256 checksum.
 
+The build runner also caches the source checkouts and native object files under
+`.core-work`; a repeat run with the same builder definition resumes incremental
+compilation instead of starting every core from a clean tree. The first corrected
+run still needs to create that cache once.
+
 The versioned release asset is the reusable result. Normal frontend-only builds
 do not invoke the core builder, so a UI/input change does not cause another
 emulator-core build. When deliberately rebuilding, bump the core-pack version/tag
