@@ -51,6 +51,8 @@ jobs:
           grep -Fqx 'channel = "1.96"' slot/rust-toolchain.toml
           grep -Fqx 'pub const OUT_W: u32 = 640;' slot/crates/slot-gfx/src/surface.rs
           grep -Fqx 'pub const OUT_H: u32 = 480;' slot/crates/slot-gfx/src/surface.rs
+          test -f slot/crates/slot/src/mtp.rs
+          grep -Fq 'slot::mtp::start(&root);' slot/crates/slot/src/device_app.rs
           test -f baseos/platforms/rg353ps/frontends/slot/fbdev.rs
           test -f slot/packaging/rg353ps/apply-rg353ps-input.py
           python3 -m py_compile slot/packaging/rg353ps/apply-rg353ps-input.py
