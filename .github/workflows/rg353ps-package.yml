@@ -71,11 +71,11 @@ jobs:
           cat > /tmp/rg353ps-wifi-adapter-test/helper <<'EOF'
           #!/bin/sh
           [ "${1:-}" = scan ] || exit 0
-          printf '%s\\t%s\\t%s\\t%s\\n' -54 '[WPA2-PSK-CCMP][ESS]' 2412 TestNet -80 '[ESS]' 2462 OpenNet
+          printf '%s\t%s\t%s\t%s\n' -54 '[WPA2-PSK-CCMP][ESS]' 2412 TestNet -80 '[ESS]' 2462 OpenNet
           EOF
           chmod 0755 /tmp/rg353ps-wifi-adapter-test/helper
           BASEOS_WIFI=/tmp/rg353ps-wifi-adapter-test/helper sh baseos/platforms/rg353ps/frontends/slot/slotnet.sh scan > /tmp/rg353ps-wifi-adapter-test/actual
-          printf '%s\\t%s\\t%s\\n' TestNet -54 1 OpenNet -80 0 > /tmp/rg353ps-wifi-adapter-test/expected
+          printf '%s\t%s\t%s\n' TestNet -54 1 OpenNet -80 0 > /tmp/rg353ps-wifi-adapter-test/expected
           diff -u /tmp/rg353ps-wifi-adapter-test/expected /tmp/rg353ps-wifi-adapter-test/actual
           grep -Fqx 'export BASEOS_SLEEP=/usr/sbin/rg353ps-sleep' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'export BASEOS_WIFI=/usr/sbin/rg353ps-wifi-connect' baseos/platforms/rg353ps/frontends/slot/launch.sh
