@@ -92,8 +92,8 @@ docker run --rm --network host --platform linux/arm64 \
     echo "[rg353ps] source staged"
     cp /slot-port/fbdev.rs "$SRC/crates/slot-gfx/src/fbdev.rs"
     echo "[rg353ps] BaseOS SDL2/KMSDRM surface installed"
-    grep -Fqx 'pub const OUT_W: u32 = 640;' "$SRC/crates/slot-gfx/src/surface.rs"
-    grep -Fqx 'pub const OUT_H: u32 = 480;' "$SRC/crates/slot-gfx/src/surface.rs"
+    grep -Fqx "pub const OUT_W: u32 = 640;" "$SRC/crates/slot-gfx/src/surface.rs"
+    grep -Fqx "pub const OUT_H: u32 = 480;" "$SRC/crates/slot-gfx/src/surface.rs"
     echo "[rg353ps] native 640x480 canvas confirmed"
 
     # Keep the new upstream AxisMap / device probing code. Apply only the
@@ -140,7 +140,7 @@ docker run --rm --network host --platform linux/arm64 \
     "$PKG/System/slot" --init-root "$PKG"
 
     cat > "$PKG/README-RG353PS.txt" <<EOF
-LUCKLUCK SLOT / 66slot - RG353PS first integration test
+LUCKLUCK SLOT / 66slot - RG353PS 640x480 ${LANGUAGE} build
 ========================================================
 
 Target: Anbernic RG353PS / RK3566 / 640x480 panel / BaseOS
