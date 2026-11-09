@@ -38,7 +38,7 @@ jobs:
           mkdir -p .core-work core-dist
           docker build --platform linux/arm64 \
             -f packaging/rg353ps/cores.Dockerfile \
-            -t slot-66-rg353ps-cores:alpine-arm64 .
+            -t slot-66-rg353ps-cores:alpine-arm64 packaging/rg353ps
           docker run --rm --platform linux/arm64 \
             -e CORE_WORK=/work/cores \
             -e CORE_OUT=/out \
