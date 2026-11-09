@@ -7,6 +7,15 @@
        alt="LUCKLUCK SLOT — a ten-system retro game frontend for Anbernic H700 handhelds on BaseOS">
 </p>
 
+> **RG353PS / BaseOS port.** Branch `port/rg353ps-640-native` is based on the real upstream
+> `66-mods-640` source tree (upstream commit `4a0b60189fb4e29e57e73de14d997260a2e9d3a1`),
+> with the native 640×480 compositor/layout retained. For RG353PS, the H700-specific EGL
+> framebuffer surface is replaced at package time with BaseOS SDL2/KMSDRM + GLES2 on Panfrost.
+> The BaseOS launcher/manifest and USB ownership remain with BaseOS; the existing card-side
+> MTP helper hook is retained. Test CI builds Simplified Chinese only; tagged releases build
+> separate Chinese and English binaries. Libretro cores are a separate reusable package
+> ([core pack v1.0.0](https://github.com/dengzhan007/slot-66/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)).
+>
 > **Branch `66-mods-640` — the 640×480 edition.** The `66-mods` branch is the 720×480 tree
 > (RG SP, RG34XX, RG34XXSP and the rest of the 720 group); this branch is the same frontend laid
 > out for the **640×480** panel (RG35XXSP and the 640 group). The two are not a build flag apart:
