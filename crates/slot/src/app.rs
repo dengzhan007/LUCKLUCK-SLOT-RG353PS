@@ -4708,6 +4708,10 @@ impl App {
     /// true on the very next frame, so a lid that shut would power the device off at once. The
     /// choice removes the deadline rather than shortening it, which is why this is an `Option`
     /// and not a number every caller has to remember to check.
+    pub fn uses_baseos_sleep(&self) -> bool {
+        self.baseos_sleep.is_some()
+    }
+
     pub fn doze_timeout(&self) -> Option<std::time::Duration> {
         if self.baseos_sleep.is_some() {
             return None;
