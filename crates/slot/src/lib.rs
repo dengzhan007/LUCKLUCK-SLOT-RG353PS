@@ -15,6 +15,7 @@ pub mod link_net;
 pub mod link_radio;
 pub mod link_start;
 pub mod music;
+pub mod mtp;
 pub mod palettes;
 pub mod persist;
 pub mod resample;
