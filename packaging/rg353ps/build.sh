@@ -52,14 +52,14 @@ echo "== building AArch64/musl toolchain image =="
 docker build --platform linux/arm64 -f "$HERE/Dockerfile" -t "$IMAGE" "$HERE"
 
 echo "== building RG353PS native-640x480 frontend ($LANGUAGE) =="
-echo "   slot: dengzhan007/slot-66 @ $SLOT_REV ($SLOT_BRANCH)"
+echo "   slot: $SLOT_REPO @ $SLOT_REV ($SLOT_BRANCH)"
 echo "   BaseOS adapter: dengzhan007/BaseOS-RG353PS @ $BASEOS_REF"
 docker run --rm --network host --platform linux/arm64 \
   -e "SLOT_REV=$SLOT_REV" \
-  -e "SLOT_BRANCH=$SLOT_BRANCH" \\
-  -e "BASEOS_REF=$BASEOS_REF" \\
-  -e "LANGUAGE=$LANGUAGE" \\
-  -e "PACKAGE_TAG=$PACKAGE_TAG" \\
+  -e "SLOT_BRANCH=$SLOT_BRANCH" \
+  -e "BASEOS_REF=$BASEOS_REF" \
+  -e "LANGUAGE=$LANGUAGE" \
+  -e "PACKAGE_TAG=$PACKAGE_TAG" \
   -e "SLOT_REPO=$SLOT_REPO" \
   -e "CARGO_HOME=/usr/local/cargo" \
   -e "CARGO_BUILD_JOBS=2" \
