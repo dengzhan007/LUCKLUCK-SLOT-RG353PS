@@ -2,6 +2,14 @@ use slot::core_picker::{CorePicker, Outcome, Press, CLOSE_MS, HOP_MS, LIFT_MS, O
 use slot_store::Core;
 use slot_ui::Millis;
 
+/// The GBA picker artwork has two sockets, not one slot for every emulator core.
+#[test]
+fn picker_choices_match_the_two_physical_socket_positions() {
+    assert_eq!(Core::GBA_PICKER, [Core::Mgba, Core::Gpsp]);
+    assert_eq!(Core::GBA_PICKER.len(), 2);
+}
+
+
 /// A picker whose faces were ready the moment it opened.
 fn opened(seat: Core, at: Millis) -> CorePicker {
     let mut p = CorePicker::open(seat, at);
