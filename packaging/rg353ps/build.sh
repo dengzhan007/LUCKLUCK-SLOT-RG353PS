@@ -159,6 +159,8 @@ docker run --rm --network host --platform linux/arm64 \
     for machine in GBA GB GBC SFC FC NEOGEO ARCADE MD PS1 PCE; do
       test -s "$PKG/System/Carts/SLOT_SYS_$machine.png"
     done
+    # The PS1 insert animation uses this branded disc when a game has no custom art.
+    test -s "$PKG/System/Carts/66SLOT_DISC_PS1.png"
     for icon in type_gb.png type_gbc.png type_gba.png \
                 type_gb_light.png type_gbc_light.png type_gba_light.png; do
       test -s "$PKG/System/Carts/$icon"
