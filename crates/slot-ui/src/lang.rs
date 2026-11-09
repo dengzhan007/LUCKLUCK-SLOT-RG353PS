@@ -139,7 +139,8 @@ mod words {
     /// ★ 2026-10-28 六六：label 改「息屏后关机」—— 原来的「息屏关机时间」读起来像"息屏
     ///   关机的时长"，而这一行说的是"息屏之后多久才关机"，词序反了。英文已是对的意思
     ///   （Power Off After Screen Off），不动。
-    pub const SETTINGS_SLEEP: &str = "Power Off After Screen Off";
+    pub const SETTINGS_SLEEP: &str = "After Screen Off";
+    pub const SETTINGS_SLEEP_SYSTEM: &str = "Deep Suspend";
     /// ★ 2026-10-16: whether fast forward and rewind keep playing the game's own audio. **A
     /// switch, like the badge** — and the first row on this screen about how the frontend
     /// *sounds* rather than about what the device does. Off is the shipped behaviour: the
@@ -407,7 +408,8 @@ mod words {
     ///   是"暗屏之后多久机器才真的停"。"doze" 是这堆代码的内部叫法，不是玩家的词。
     /// ★ 2026-10-28 六六：label 改「息屏后关机」—— 原来的「息屏关机时间」读起来像"息屏关机
     ///   的时长"，而这一行说的是"息屏之后多久才关机"，词序反了。
-    pub const SETTINGS_SLEEP: &str = "息屏后关机";
+    pub const SETTINGS_SLEEP: &str = "息屏后处理";
+    pub const SETTINGS_SLEEP_SYSTEM: &str = "系统深度休眠";
     /// ★ 2026-10-16：快进与回溯的时候，还要不要听见游戏自己的声音。**和标识一样是个开关**，
     ///   也是这一屏第一行关于"听起来"而不是"机器干什么"的设置。默认「关」，也就是出货以来的
     ///   做法：加速时 worker 直接丢掉核心的音频。开到「开」是两回事，按速度分开——回溯放的是
