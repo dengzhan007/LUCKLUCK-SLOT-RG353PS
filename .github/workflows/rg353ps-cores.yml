@@ -1,0 +1,77 @@
+name: RG353PS reusable libretro cores
+
+on:
+  push:
+    branches:
+      - port/rg353ps-cores-aarch64-musl
+    paths:
+      - packaging/rg353ps/build-cores.sh
+      - packaging/rg353ps/cores.Dockerfile
+      - packaging/rg353ps/CORES.md
+      - .github/workflows/rg353ps-cores.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rg353ps-core-pack-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-cores:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable ARM64 emulation
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build AArch64 musl core pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .core-work core-dist
+          docker build --platform linux/arm64 \
+            -f packaging/rg353ps/cores.Dockerfile \
+            -t slot-66-rg353ps-cores:alpine-arm64 .
+          docker run --rm --platform linux/arm64 \
+            -e CORE_WORK=/work/cores \
+            -e CORE_OUT=/out \
+            -e MAKE_JOBS=2 \
+            -v "$GITHUB_WORKSPACE/.core-work:/work/cores" \
+            -v "$GITHUB_WORKSPACE/core-dist:/out" \
+            slot-66-rg353ps-cores:alpine-arm64
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: slot-66-rg353ps-cores-aarch64-musl-v1.0.0
+          path: |
+            core-dist/slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip
+            core-dist/slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish reusable prerelease asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="rg353ps-cores-aarch64-musl-v1.0.0"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; refusing to replace a published core pack."
+            exit 1
+          fi
+          gh release create "$TAG" \
+            "core-dist/slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip" \
+            "core-dist/slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip.sha256" \
+            --title "RG353PS libretro cores — AArch64 / musl v1.0.0" \
+            --notes "Initial reusable RG353PS core pack. Built in Alpine Linux arm64/musl. CI checks AArch64 ELF, dynamic-loader resolution, dlopen(RTLD_NOW), and libretro API version 1. This is a prerelease pending physical-device gameplay and performance validation. Exact source commit IDs and licences are included in the ZIP." \
+            --prerelease \
+            --target "$GITHUB_SHA"
