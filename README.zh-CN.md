@@ -13,7 +13,7 @@
 > 使用 BaseOS 的 SDL2/KMSDRM + GLES2/Panfrost，不使用 H700 专用 EGL framebuffer 后端。
 > BaseOS 继续负责启动器、manifest 和 USB gadget；卡侧 MTP 辅助脚本启动钩子予以保留。
 > 测试 CI 只构建简体中文版，打正式标签时才分别构建中英文二进制。模拟器核心独立复用，
-> 不随前端重复编译（[核心包 v1.0.0](https://github.com/dengzhan007/slot-66/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)）。
+> 不随前端重复编译（[核心包 v1.0.0](https://github.com/dengzhan007/LUCKLUCK-SLOT-RG353PS/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)）。
 >
 > **分支 `66-mods-640` —— 640×480 版。** `66-mods` 是 720×480 那棵树（RG SP、RG34XX、RG34XXSP
 > 与其余 720 组机器）；本分支是同一套前端按 **640×480** 面板排的（RG35XXSP 与 640 组）。
