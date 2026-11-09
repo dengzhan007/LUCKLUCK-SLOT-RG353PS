@@ -70,7 +70,8 @@ docker run --rm --network host --platform linux/arm64 \
   -v "$WORK/cargo-registry:/usr/local/cargo/registry" \
   -v "$WORK/cargo-git:/usr/local/cargo/git" \
   -v "$WORK/cargo-target:/cargo-target" \
-  "$IMAGE" sh -euc '
+  "$IMAGE" sh -euxc '
+    echo "[rg353ps] container entered"
     export RUSTFLAGS="-C target-feature=-crt-static"
     SRC=/tmp/slot-src
     TARGET=/cargo-target
@@ -86,17 +87,23 @@ docker run --rm --network host --platform linux/arm64 \
 
     rm -rf "$SRC" "$PKG"
     mkdir -p "$SRC" "$PKG"
+    echo "[rg353ps] staging source"
     cp -R /slot-up/. "$SRC/"
+    echo "[rg353ps] source staged"
     cp /slot-port/fbdev.rs "$SRC/crates/slot-gfx/src/fbdev.rs"
+    echo "[rg353ps] BaseOS SDL2/KMSDRM surface installed"
     grep -Fqx 'pub const OUT_W: u32 = 640;' "$SRC/crates/slot-gfx/src/surface.rs"
     grep -Fqx 'pub const OUT_H: u32 = 480;' "$SRC/crates/slot-gfx/src/surface.rs"
+    echo "[rg353ps] native 640x480 canvas confirmed"
 
     # Keep the new upstream AxisMap / device probing code. Apply only the
     # RG353PS-specific input constants and key table with checked anchors.
+    echo "[rg353ps] applying measured input mapping"
     python3 /slot-build/apply-rg353ps-input.py "$SRC/crates/slot/src/input/evdev.rs"
+    echo "[rg353ps] input mapping applied"
 
     cd "$SRC"
-    echo "=== cargo build (device / release / AArch64-musl) ==="
+    echo "=== cargo build (device / release / AArch64-musl; language=$LANGUAGE; features=$FEATURES) ==="
     cargo build --release --target-dir "$TARGET" -p slot --no-default-features --features "$FEATURES"
     BIN="$TARGET/release/slot"
     test -x "$BIN"
