@@ -20,18 +20,13 @@ concurrency:
 
 jobs:
   build-cores:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 240
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Enable ARM64 emulation
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
-      - name: Build AArch64 musl core pack
+      - name: Build AArch64 musl core pack (native ARM64 runner)
         shell: bash
         run: |
           set -euo pipefail
@@ -42,7 +37,7 @@ jobs:
           docker run --rm --platform linux/arm64 \
             -e CORE_WORK=/work/cores \
             -e CORE_OUT=/out \
-            -e MAKE_JOBS=2 \
+            -e MAKE_JOBS=4 \
             -v "$GITHUB_WORKSPACE/.core-work:/work/cores" \
             -v "$GITHUB_WORKSPACE/core-dist:/out" \
             slot-66-rg353ps-cores:alpine-arm64
