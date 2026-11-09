@@ -37,6 +37,11 @@ pub enum Core {
 }
 
 impl Core {
+    /// The only two cores selectable on the GBA shelf. Keep this separate from ALL:
+    /// ALL indexes every emulator core for persistence and artwork, while the GBA
+    /// picker has exactly two physical sockets.
+    pub const GBA_PICKER: [Core; 2] = [Core::Mgba, Core::Gpsp];
+
     /// Every variant, once. The single source of truth for "is this name a core directory" —
     /// `migrate_states` walks this rather than spelling the variant list out a second time,
     /// so a third core added here does not also have to be remembered at every call site
