@@ -11015,9 +11015,14 @@ impl App {
         // Run BaseOS' sleep helper as a detached child: it stops Wi-Fi, unbinds the SDIO
         // function, selects mem_sleep=deep and blocks in /sys/power/state until the power key
         // wakes the board. The frontend frame loop simply remains suspended with the SoC.
-        if let Some(path) = self.baseos_sleep.as_ref() {
-            if let Err(error) = std::process::Command::new(path).spawn() {
-                eprintln!("slot: could not start BaseOS deep suspend ({}): {error}", path.display());
+        if let Some(path) = self.baseos_sleep.clone() {
+            if let Err(error) = std::process::Command::new(&path).spawn() {
+                eprintln!("slot: could not start BaseOS deep suspend ({}): {error}; restoring fallback timeout", path.display());
+                self.baseos_sleep = None;
+                let timeout = self.doze_timeout();
+                if let Some(power) = &mut self.power {
+                    power.set_timeout(timeout);
+                }
             }
         }
     }
@@ -11039,14 +11044,9 @@ impl App {
         }
     }
 
-    /// A dark panel is not a saving: the machine is still running flat out behind it at
-    /// 400-700 mA. So the dark is a grace period rather than a state, and when it runs out
-    /// the device stops for real.
-    ///
-    /// It suspends beautifully — under 45 mA — and that is not on offer, because it cannot
-    /// wake itself back up: the RTC alarm arms, reads back, and never fires. A sleep nothing
-    /// can end is a slow leak with a better name. Powering off costs the user a three second
-    /// boot, and `slot.state` still names the cart, so they come back to the same frame.
+    /// Fallback for platforms without a native suspend hook: the screen stays dark for
+    /// the configured grace period, then the device powers off. RG353PS supplies
+    /// `BASEOS_SLEEP`, so its normal path enters deep suspend-to-RAM and does not expire here.
     pub fn on_doze_timeout(&mut self) {
         if !matches!(self.phase, Phase::Doze { .. }) {
             return;
