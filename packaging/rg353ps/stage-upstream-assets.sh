@@ -41,12 +41,13 @@ rm -rf "$EXTRACT" "$STAGE"
 mkdir -p "$EXTRACT" "$STAGE"
 unzip -q "$ARCHIVE" -d "$EXTRACT"
 
-CARTS_FILE="$(find "$EXTRACT" -type f -path '*/System/Carts/carts.tsv' -print -quit)"
-[ -n "$CARTS_FILE" ] || {
-  echo "upstream archive has no System/Carts/carts.tsv; package layout changed" >&2
+CARTS_DIR="$(find "$EXTRACT" -type d -ipath '*/System/Carts' -print -quit)"
+if [ -z "$CARTS_DIR" ]; then
+  echo "upstream archive has no System/Carts directory; relevant archive paths:" >&2
+  unzip -Z1 "$ARCHIVE" | grep -iE '(^|/)(system|carts|music|overlay|bootlogos)(/|$)|SLOT_SYS|type_gb' | head -160 >&2 || :
   exit 1
-}
-UPSTREAM_ROOT="${CARTS_FILE%/System/Carts/carts.tsv}"
+fi
+UPSTREAM_ROOT="${CARTS_DIR%/System/Carts}"
 [ -d "$UPSTREAM_ROOT/Music/Fonts" ] || {
   echo "upstream archive is missing Music/Fonts" >&2
   exit 1
