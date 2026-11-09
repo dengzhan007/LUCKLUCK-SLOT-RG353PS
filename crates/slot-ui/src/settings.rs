@@ -306,10 +306,18 @@ pub const HINT_PICK: &str = "上下选择    左右浏览    A 替换    B 取�
 /// is at.
 /// **`logos` is the card's too**: the boot screen's list is whatever `.bmp` files are sitting
 /// in `Bootlogos/`, and this crate has no more heard of a card than it has of a gear list.
-pub fn values(row: Row, doze: &[u8], ff: &[u8], rewind: &[u8], logos: &[String]) -> Vec<String> {
+pub fn values(
+    row: Row,
+    doze: &[u8],
+    ff: &[u8],
+    rewind: &[u8],
+    logos: &[String],
+    baseos_sleep: bool,
+) -> Vec<String> {
     match row {
         Row::FastForward => ff.iter().map(|n| crate::lang::speed(*n)).collect(),
         Row::Rewind => rewind.iter().map(|n| crate::lang::speed(*n)).collect(),
+        Row::Sleep if baseos_sleep => vec![crate::lang::SETTINGS_SLEEP_SYSTEM.to_string()],
         Row::Sleep => doze.iter().map(|m| crate::lang::minutes(*m)).collect(),
         // ★ **2026-10-28 第二轮（六六）：日期与时间去掉「校准」描述项** —— 和刷新一样成了
         //   "只留名字"的行，`A` 开门（`opens`），值位空、`face` 只画居中的名字。原先那一个
