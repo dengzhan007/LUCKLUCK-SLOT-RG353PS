@@ -50,14 +50,13 @@ jobs:
           test -f slot/rust-toolchain.toml
           grep -Fqx 'channel = "1.96"' slot/rust-toolchain.toml
           test -f baseos/platforms/rg353ps/frontends/slot/fbdev.rs
-          test -f baseos/platforms/rg353ps/frontends/slot/slot-rg353ps.patch
-          test -f baseos/platforms/rg353ps/frontends/slot/slot-power.patch
+          test -f slot/packaging/rg353ps/apply-rg353ps-input.py
+          python3 -m py_compile slot/packaging/rg353ps/apply-rg353ps-input.py
           test -f baseos/platforms/rg353ps/frontends/slot/launch.sh
           test -f baseos/platforms/rg353ps/frontends/slot/manifest.conf
           grep -Fqx 'adapter_api=1' baseos/platforms/rg353ps/frontends/slot/manifest.conf
           grep -Fqx 'volume_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
-          grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/front/manifest.conf 2>/dev/null || \
-            grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
+          grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
           grep -Fqx '# baseos: volume-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx '# baseos: power-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
           sh -n slot/packaging/rg353ps/build.sh
