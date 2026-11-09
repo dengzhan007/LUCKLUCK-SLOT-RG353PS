@@ -22,6 +22,12 @@ fn it_opens_over_the_open_time_and_then_rests() {
 
 /// The chip is already where the cart runs, so the board says what is true before it asks.
 #[test]
+fn picker_choices_match_the_two_physical_socket_positions() {
+    assert_eq!(Core::GBA_PICKER, [Core::Mgba, Core::Gpsp]);
+    assert_eq!(Core::GBA_PICKER.len(), slot_ui::SOCKET_U.len());
+}
+
+#[test]
 fn the_chip_starts_seated_in_the_carts_own_core() {
     let chip = opened(Core::Gpsp, 0).chip(0);
     assert_eq!(chip.seated, Some(Core::Gpsp));
