@@ -2246,6 +2246,8 @@ pub struct App {
     clock: f64,
     /// `None` in unit tests, where there is no panel to darken and no battery to run out.
     power: Option<Power>,
+    /// BaseOS runtime deep-suspend hook. Absent on host builds and on systems that do not provide it.
+    baseos_sleep: Option<PathBuf>,
     dozed_at: Millis,
     /// When the state next has to be on the card. Moved by every resume write, not only by
     /// the autosave itself.
@@ -2524,6 +2526,7 @@ impl App {
             game_ready: false,
             clock: 0.0,
             power: None,
+            baseos_sleep: None,
             dozed_at: 0,
             autosave_at: AUTOSAVE_MS,
             battery_at: BATTERY_POLL_MS,
@@ -2643,6 +2646,14 @@ impl App {
         let mut app = App::new(scan_cached(root).unwrap_or_default());
         eprintln!("slot: boot: scan_cached {} ms", t_scan.elapsed().as_millis());
         app.root = Some(root.to_path_buf());
+        // BaseOS exports this adapter hook. Unlike the generic frontend timer, it enters the
+        // board's real deep-suspend path and returns only after the physical power key wakes it.
+        app.baseos_sleep = std::env::var_os("BASEOS_SLEEP")
+            .map(PathBuf::from)
+            .filter(|path| path.is_file());
+        if let Some(path) = app.baseos_sleep.as_ref() {
+            eprintln!("slot: BaseOS suspend hook: {}", path.display());
+        }
         // The display filter (panel mask + colour correction) is read from the card so the
         // shipping look can be a per-card choice, then cycled live during play. The mask falls
         // back to the built-in LCD3x table; the colour correction falls back to the grayscale (0%
@@ -4369,6 +4380,7 @@ impl App {
                 .iter()
                 .position(|n| *n == self.state.rewind_speed)
                 .unwrap_or(0),
+            slot_ui::settings::Row::Sleep if self.baseos_sleep.is_some() => 0,
             slot_ui::settings::Row::Sleep => slot_store::DOZE_MIN_CHOICES
                 .iter()
                 .position(|m| *m == self.state.doze_min)
@@ -4477,6 +4489,7 @@ impl App {
             // ★ 2026-10-23 删除（六六：「美术资源…已经迭代不需要这功能了」）：这一行连同
             //   `ArtSource` 开关一起退出设置页。`art_source` 状态与 `set_art_source` 调用
             //   仍保留（卡带脸的烘焙来源还在用），只是屏上不再有这一行。
+            slot_ui::settings::Row::Sleep if self.baseos_sleep.is_some() => return,
             slot_ui::settings::Row::Sleep => {
                 let at = self.settings_value(row);
                 let to = Self::step_index(at, slot_store::DOZE_MIN_CHOICES.len(), right);
@@ -4696,6 +4709,9 @@ impl App {
     /// choice removes the deadline rather than shortening it, which is why this is an `Option`
     /// and not a number every caller has to remember to check.
     pub fn doze_timeout(&self) -> Option<std::time::Duration> {
+        if self.baseos_sleep.is_some() {
+            return None;
+        }
         (self.state.doze_min != 0)
             .then(|| std::time::Duration::from_secs(u64::from(self.state.doze_min) * 60))
     }
@@ -10991,6 +11007,14 @@ impl App {
         self.dozed_at = self.now();
         if let Some(power) = &mut self.power {
             power.on_close();
+        }
+        // Run BaseOS' sleep helper as a detached child: it stops Wi-Fi, unbinds the SDIO
+        // function, selects mem_sleep=deep and blocks in /sys/power/state until the power key
+        // wakes the board. The frontend frame loop simply remains suspended with the SoC.
+        if let Some(path) = self.baseos_sleep.as_ref() {
+            if let Err(error) = std::process::Command::new(path).spawn() {
+                eprintln!("slot: could not start BaseOS deep suspend ({}): {error}", path.display());
+            }
         }
     }
 
