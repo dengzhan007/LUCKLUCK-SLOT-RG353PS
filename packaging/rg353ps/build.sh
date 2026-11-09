@@ -11,7 +11,7 @@ FRONTEND_PORT="$BASEOS_ROOT/platforms/rg353ps/frontends/slot"
 FRONTEND_MANIFEST="$FRONTEND_PORT/manifest.conf"
 FRONTEND_LAUNCHER="$FRONTEND_PORT/launch.sh"
 for file in "$FRONTEND_MANIFEST" "$FRONTEND_LAUNCHER" \
-            "$FRONTEND_PORT/fbdev.rs"; do
+            "$FRONTEND_PORT/fbdev.rs" "$FRONTEND_PORT/slotnet.sh"; do
   [ -f "$file" ] || { echo "missing RG353PS adapter input: $file" >&2; exit 1; }
 done
 
@@ -27,6 +27,7 @@ esac
 [ "$PRIORITY" -le 9999 ] || { echo "adapter priority must be 0..9999" >&2; exit 1; }
 grep -Fqx '# baseos: volume-owned' "$FRONTEND_LAUNCHER"
 grep -Fqx '# baseos: power-owned' "$FRONTEND_LAUNCHER"
+sh -n "$FRONTEND_PORT/slotnet.sh"
 
 SLOT_REV="${SLOT_REV:-$(git -C "$REPO_ROOT" rev-parse HEAD)}"
 BASEOS_REF="${BASEOS_REF:-main}"
@@ -117,6 +118,9 @@ docker run --rm --network host --platform linux/arm64 \
       "$PKG/.baseos/frontends/slot" "$PKG/baseos/frontends/slot"
     cp "$BIN" "$PKG/System/slot"
     chmod 0755 "$PKG/System/slot"
+    # Slot calls System/slotnet.sh; BaseOS supplies this adapter to bridge its Wi-Fi control plane.
+    cp /slot-port/slotnet.sh "$PKG/System/slotnet.sh"
+    chmod 0755 "$PKG/System/slotnet.sh"
 
     cp /slot-port/launch.sh "$PKG/.baseos/frontends/slot/launch.sh"
     cp /slot-port/launch.sh "$PKG/baseos/frontends/slot/launch.sh"
