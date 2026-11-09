@@ -2743,18 +2743,23 @@ fn sync_disc_face(app: &mut App, compositor: &mut Compositor) {
     if built == want_stem {
         return;
     }
-    match app.disc_face_path() {
-        Some(path) => {
-            if let Some(rgba) = slot_ui::cover(&path, 300, 300) {
-                let id = compositor.create_texture(300, 300, &rgba);
-                app.set_disc_face(Some((id, 300, 300)));
-            } else {
-                app.set_disc_face(None);
-            }
-        },
-        None => {
-            app.set_disc_face(None);
+
+    // Prefer a game's own label/full-disc artwork. The per-machine PS1 default is
+    // loaded separately for the shelf, so it must also be wired here explicitly:
+    // without it, a stock install silently falls back to the generic vector disc.
+    let specific = app
+        .disc_face_path()
+        .and_then(|path| slot_ui::cover(&path, 300, 300));
+    let fallback = app
+        .root()
+        .map(|root| root.join("System/Carts/66SLOT_DISC_PS1.png"))
+        .and_then(|path| slot_ui::cover(&path, 300, 300));
+    match specific.or(fallback) {
+        Some(rgba) => {
+            let id = compositor.create_texture(300, 300, &rgba);
+            app.set_disc_face(Some((id, 300, 300)));
         }
+        None => app.set_disc_face(None),
     }
     app.set_disc_face_built_for(want_stem);
 }
