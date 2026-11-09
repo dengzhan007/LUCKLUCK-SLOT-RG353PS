@@ -17,7 +17,7 @@ on:
       baseos_ref:
         description: "BaseOS-RG353PS ref used for the device adapter"
         required: true
-        default: "4353f0bcee34c3f9411c0399e370aa010901a765"
+        default: "f091ec1c6c004ce0aa382daef08ac06afd76bc7c"
 
 permissions:
   contents: read
@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dengzhan007/BaseOS-RG353PS
-          ref: ${{ inputs.baseos_ref || '4353f0bcee34c3f9411c0399e370aa010901a765' }}
+          ref: ${{ inputs.baseos_ref || 'f091ec1c6c004ce0aa382daef08ac06afd76bc7c' }}
           path: baseos
 
       - name: Validate native 640 tree and BaseOS adapter
@@ -71,11 +71,11 @@ jobs:
           cat > /tmp/rg353ps-wifi-adapter-test/helper <<'EOF'
           #!/bin/sh
           [ "${1:-}" = scan ] || exit 0
-          printf '%b\\n' '-54\\t[WPA2-PSK-CCMP][ESS]\\t2412\\tTestNet' '-80\\t[ESS]\\t2462\\tOpenNet'
+          printf '%s\\t%s\\t%s\\t%s\\n' -54 '[WPA2-PSK-CCMP][ESS]' 2412 TestNet -80 '[ESS]' 2462 OpenNet
           EOF
           chmod 0755 /tmp/rg353ps-wifi-adapter-test/helper
           BASEOS_WIFI=/tmp/rg353ps-wifi-adapter-test/helper sh baseos/platforms/rg353ps/frontends/slot/slotnet.sh scan > /tmp/rg353ps-wifi-adapter-test/actual
-          printf '%b\\n' 'TestNet\\t-54\\t1' 'OpenNet\\t-80\\t0' > /tmp/rg353ps-wifi-adapter-test/expected
+          printf '%s\\t%s\\t%s\\n' TestNet -54 1 OpenNet -80 0 > /tmp/rg353ps-wifi-adapter-test/expected
           diff -u /tmp/rg353ps-wifi-adapter-test/expected /tmp/rg353ps-wifi-adapter-test/actual
           grep -Fqx 'export BASEOS_SLEEP=/usr/sbin/rg353ps-sleep' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'export BASEOS_WIFI=/usr/sbin/rg353ps-wifi-connect' baseos/platforms/rg353ps/frontends/slot/launch.sh
@@ -101,7 +101,7 @@ jobs:
       - name: Build Chinese test ZIP only
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
-          BASEOS_REF: ${{ inputs.baseos_ref || '4353f0bcee34c3f9411c0399e370aa010901a765' }}
+          BASEOS_REF: ${{ inputs.baseos_ref || 'f091ec1c6c004ce0aa382daef08ac06afd76bc7c' }}
           SLOT_REV: ${{ github.sha }}
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
