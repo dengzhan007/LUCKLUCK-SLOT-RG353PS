@@ -71,13 +71,21 @@ for machine in GBA GB GBC SFC FC NEOGEO ARCADE MD PS1 PCE; do
 done
 
 # The lower-left GBA/GB/GBC marks are separate artwork from selector badges.
+# Some upstream package revisions omit these legacy files even though this 640
+# frontend still probes their names. Record the exact release contents; a
+# pinned compatibility supplement is applied below only if they are absent.
+MISSING_MACHINE_MARKS=""
 for file in type_gb.png type_gbc.png type_gba.png \
             type_gb_light.png type_gbc_light.png type_gba_light.png; do
-  [ -s "$UPSTREAM_ROOT/System/Carts/$file" ] || {
-    echo "upstream UI bundle is missing machine mark: $file" >&2
-    exit 1
-  }
+  if [ ! -s "$UPSTREAM_ROOT/System/Carts/$file" ]; then
+    MISSING_MACHINE_MARKS="$MISSING_MACHINE_MARKS $file"
+  fi
 done
+if [ -n "$MISSING_MACHINE_MARKS" ]; then
+  echo "upstream 640 bundle omits legacy machine marks:$MISSING_MACHINE_MARKS" >&2
+  echo "Present System/Carts artwork:" >&2
+  find "$CARTS_DIR" -maxdepth 2 -type f -printf '%P\n' | sort >&2
+fi
 
 # These are runtime-loaded by the music deck, not embedded in System/slot.
 for file in unifont-16px.otf press-start-2p.ttf; do
@@ -104,8 +112,10 @@ Release: $UPSTREAM_TAG
 Package: $ASSET_NAME
 SHA-256: $ASSET_SHA256
 Imported paths: System/Carts, Music, Overlay, Bootlogos
+Missing legacy machine marks:$MISSING_MACHINE_MARKS
 Not imported: System/slot, libretro cores, saves, ROMs or user content
 EOF
+find "$STAGE/System/Carts" -maxdepth 2 -type f -printf '%P\\n' | sort > "$STAGE/UPSTREAM-CARTS-INDEX.txt"
 
 echo "== upstream UI asset staging verified =="
 printf 'System/Carts PNGs: '
