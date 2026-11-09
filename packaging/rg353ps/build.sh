@@ -33,7 +33,7 @@ BASEOS_REF="${BASEOS_REF:-main}"
 SLOT_BRANCH="${SLOT_BRANCH:-port/rg353ps-640-native}"
 LANGUAGE="${LANGUAGE:-zh}"
 PACKAGE_TAG="${PACKAGE_TAG:-test}"
-SLOT_REPO="${SLOT_REPO:-${GITHUB_REPOSITORY:-dengzhan007/slot-66}}"
+SLOT_REPO="${SLOT_REPO:-${GITHUB_REPOSITORY:-dengzhan007/LUCKLUCK-SLOT-RG353PS}}"
 case "$LANGUAGE" in
   zh|en) ;;
   *) echo "LANGUAGE must be zh or en (got: $LANGUAGE)" >&2; exit 2 ;;
@@ -78,7 +78,7 @@ docker run --rm --network host --platform linux/arm64 \
     PKG=/tmp/package
     LANGUAGE="${LANGUAGE:-zh}"
     PACKAGE_TAG="${PACKAGE_TAG:-test}"
-    SLOT_REPO="${SLOT_REPO:-dengzhan007/slot-66}"
+    SLOT_REPO="${SLOT_REPO:-dengzhan007/LUCKLUCK-SLOT-RG353PS}"
     case "$LANGUAGE" in
       zh) FEATURES=device; LANGUAGE_NAME="Simplified Chinese" ;;
       en) FEATURES=device,lang-en; LANGUAGE_NAME="English" ;;
@@ -169,7 +169,7 @@ launch separately. A successful compile does not prove hardware operation.
 EOF
 
     cat > "$PKG/BUILD-INFO.txt" <<EOF
-Slot repository: dengzhan007/slot-66
+Slot repository: $SLOT_REPO
 Slot branch: $SLOT_BRANCH
 Slot source commit: $SLOT_REV
 BaseOS repository: dengzhan007/BaseOS-RG353PS
