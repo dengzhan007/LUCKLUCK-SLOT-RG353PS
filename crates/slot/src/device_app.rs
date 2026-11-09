@@ -36,6 +36,9 @@ pub fn run() {
     let root = std::env::var_os("SLOT_ROOT")
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from(CARD));
+    // BaseOS owns the USB gadget; this detached card-side helper restores the
+    // existing MTP hand-off without replacing BaseOS MTP/storage services.
+    slot::mtp::start(&root);
     // This boot's startup log, clean. `boot.log` is only written once the frontend exists, so
     // a failure before that would otherwise say nothing anywhere.
     let _ = std::fs::write(root.join("System/boot.err"), "");
