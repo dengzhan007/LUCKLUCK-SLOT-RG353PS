@@ -1100,6 +1100,7 @@ impl Frontend {
                     &FF_SPEED_CHOICES,
                     &REWIND_SPEED_CHOICES,
                     &logos,
+                    self.session.app().uses_baseos_sleep(),
                 )
                     .iter()
                     .map(|value| {
