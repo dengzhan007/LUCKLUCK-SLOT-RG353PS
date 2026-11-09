@@ -11,9 +11,7 @@ FRONTEND_PORT="$BASEOS_ROOT/platforms/rg353ps/frontends/slot"
 FRONTEND_MANIFEST="$FRONTEND_PORT/manifest.conf"
 FRONTEND_LAUNCHER="$FRONTEND_PORT/launch.sh"
 for file in "$FRONTEND_MANIFEST" "$FRONTEND_LAUNCHER" \
-            "$FRONTEND_PORT/fbdev.rs" \
-            "$FRONTEND_PORT/slot-rg353ps.patch" \
-            "$FRONTEND_PORT/slot-power.patch"; do
+            "$FRONTEND_PORT/fbdev.rs"; do
   [ -f "$file" ] || { echo "missing RG353PS adapter input: $file" >&2; exit 1; }
 done
 
@@ -57,6 +55,7 @@ docker run --rm --network host --platform linux/arm64 \
   -e "CARGO_BUILD_JOBS=2" \
   -v "$SRC_HOST:/slot-up:ro" \
   -v "$FRONTEND_PORT:/slot-port:ro" \
+  -v "$HERE:/slot-build:ro" \
   -v "$OUT:/out" \
   -v "$WORK/cargo-registry:/usr/local/cargo/registry" \
   -v "$WORK/cargo-git:/usr/local/cargo/git" \
@@ -70,14 +69,11 @@ docker run --rm --network host --platform linux/arm64 \
     rm -rf "$SRC" "$PKG"
     mkdir -p "$SRC" "$PKG"
     cp -R /slot-up/. "$SRC/"
-    git -C "$SRC" init -q
     cp /slot-port/fbdev.rs "$SRC/crates/slot-gfx/src/fbdev.rs"
 
-    for patch in /slot-port/slot-rg353ps.patch /slot-port/slot-power.patch; do
-      echo "checking $(basename "$patch")"
-      git -C "$SRC" apply --check "$patch"
-      git -C "$SRC" apply "$patch"
-    done
+    # Keep the new upstream AxisMap / device probing code. Apply only the
+    # RG353PS-specific input constants and key table with checked anchors.
+    python3 /slot-build/apply-rg353ps-input.py "$SRC/crates/slot/src/input/evdev.rs"
 
     cd "$SRC"
     echo "=== cargo build (device / release / AArch64-musl) ==="
