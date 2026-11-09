@@ -29,7 +29,7 @@ concurrency:
 jobs:
   package:
     name: Build RG353PS native 640x480 frontend (Chinese / AArch64 musl)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
     steps:
       - name: Checkout native 640 Slot source
@@ -75,14 +75,9 @@ jobs:
             slot/work/rg353ps/cargo-registry
             slot/work/rg353ps/cargo-git
             slot/work/rg353ps/cargo-target
-          key: rg353ps-native-640-cargo-${{ runner.os }}-${{ hashFiles('slot/Cargo.lock', 'slot/rust-toolchain.toml') }}
+          key: rg353ps-native-640-cargo-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('slot/Cargo.lock', 'slot/rust-toolchain.toml') }}
           restore-keys: |
             rg353ps-native-640-cargo-${{ runner.os }}-
-
-      - name: Enable AArch64 container execution
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
 
       - name: Build Chinese test ZIP only
         env:
