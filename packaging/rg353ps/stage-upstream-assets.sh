@@ -75,6 +75,8 @@ done
 # frontend still probes their names. Record the exact release contents; a
 # pinned compatibility supplement is applied below only if they are absent.
 MISSING_MACHINE_MARKS=""
+LEGACY_TAG="not-needed"
+LEGACY_SHA256="not-needed"
 for file in type_gb.png type_gbc.png type_gba.png \
             type_gb_light.png type_gbc_light.png type_gba_light.png; do
   if [ ! -s "$UPSTREAM_ROOT/System/Carts/$file" ]; then
