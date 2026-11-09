@@ -42,6 +42,16 @@ The upstream 640 branch removed the card-side MTP launch hook. This port restore
 
 The GBA picker has two physical socket positions. The existing eight-core `Core::ALL` remains for persistence/artwork; the picker uses a dedicated `Core::GBA_PICKER=[Mgba,Gpsp]` list and regression test so the two UI sockets cannot index eight choices.
 
+
+## RG353PS power and Wi-Fi service adapters
+
+The BaseOS launcher exports two device-service contracts:
+
+- `BASEOS_SLEEP=/usr/sbin/rg353ps-sleep`: Slot uses this on a user power tap after flushing resume state and blanking the panel. On RG353PS the settings row reports **System Deep Suspend**; legacy `doze_min` values on existing cards no longer cause an idle poweroff. If the helper cannot be spawned, Slot falls back to the generic frontend timeout instead of remaining dark indefinitely. Long-press shutdown remains a separate poweroff path.
+- `BASEOS_WIFI=/usr/sbin/rg353ps-wifi-connect`: the BaseOS package's `System/slotnet.sh` compatibility adapter translates Slot's card-side `up/down/scan` contract to the BaseOS Wi-Fi control plane. Scan output is normalized to `SSID<TAB>signal<TAB>secured`, the address is written to `/tmp/slot-ip` for the direct-connect dialog, and credentials saved by Slot in `System/wifi.conf` are used by the BaseOS supplicant helper. Slot must not start a second Wi-Fi driver or supplicant itself.
+
+The BaseOS integration is documented in `BaseOS-RG353PS/platforms/rg353ps/POWER.md` and `FRONTENDS.md`. The RG353PS packaging workflow validates the helper shell syntax and tests the scan-field conversion using a stub helper. This CI test does not replace on-device association, DHCP, internet reachability, suspend-current and wake/resume validation.
+
 ## Chinese / English build policy
 
 The source supports two distinct compile-time UI variants:
