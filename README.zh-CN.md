@@ -7,6 +7,14 @@
        alt="LUCKLUCK SLOT —— 运行在 BaseOS 上的十机种复古游戏前端，适配 Anbernic H700 系列掌机">
 </p>
 
+> **RG353PS / BaseOS 移植分支。** `port/rg353ps-640-native` 直接以真正的上游
+> `66-mods-640` 源码树为基底（上游提交 `4a0b60189fb4e29e57e73de14d997260a2e9d3a1`），
+> 保留原生 640×480 合成画布和整套 640 布局。针对 RG353PS，打包时仅替换设备图形后端：
+> 使用 BaseOS 的 SDL2/KMSDRM + GLES2/Panfrost，不使用 H700 专用 EGL framebuffer 后端。
+> BaseOS 继续负责启动器、manifest 和 USB gadget；卡侧 MTP 辅助脚本启动钩子予以保留。
+> 测试 CI 只构建简体中文版，打正式标签时才分别构建中英文二进制。模拟器核心独立复用，
+> 不随前端重复编译（[核心包 v1.0.0](https://github.com/dengzhan007/slot-66/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)）。
+>
 > **分支 `66-mods-640` —— 640×480 版。** `66-mods` 是 720×480 那棵树（RG SP、RG34XX、RG34XXSP
 > 与其余 720 组机器）；本分支是同一套前端按 **640×480** 面板排的（RG35XXSP 与 640 组）。
 > 两者不是差一个编译开关：货架排布、面板底板、卡座、遮罩孔径、桌面图、电源菜单全部按分辨率
