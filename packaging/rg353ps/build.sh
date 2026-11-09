@@ -144,6 +144,7 @@ LUCKLUCK SLOT / 66slot - RG353PS 640x480 ${LANGUAGE} build
 ========================================================
 
 Target: Anbernic RG353PS / RK3566 / 640x480 panel / BaseOS
+Language: $LANGUAGE ($LANGUAGE_NAME)
 Display: SDL2 KMSDRM fullscreen + OpenGL ES; not the upstream Mali fbdev EGL path.
 This package contains the frontend executable and BaseOS adapter only.
 It does NOT contain or rebuild libretro emulator core libraries.
@@ -176,7 +177,8 @@ BaseOS repository: dengzhan007/BaseOS-RG353PS
 BaseOS adapter ref: $BASEOS_REF
 Target: aarch64-unknown-linux-musl
 Panel: 640x480
-Build mode: release / device feature
+Build mode: release / features $FEATURES
+Language: $LANGUAGE ($LANGUAGE_NAME)
 Emulator cores: not built or included
 EOF
 
