@@ -5,7 +5,7 @@ never rebuild or overwrite the emulator core libraries.
 
 ## Current reusable pack
 
-- Release: [RG353PS libretro cores — AArch64 / musl v1.0.0](https://github.com/dengzhan007/slot-66/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)
+- Release: [RG353PS libretro cores — AArch64 / musl v1.0.0](https://github.com/dengzhan007/LUCKLUCK-SLOT-RG353PS/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)
 - Archive: `slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip`
 - SHA-256 sidecar: `slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip.sha256`
 - Target: RG353PS / RK3566 / Cortex-A55 / AArch64 / musl
