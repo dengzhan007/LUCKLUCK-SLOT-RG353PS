@@ -176,8 +176,11 @@ Target: Anbernic RG353PS / RK3566 / 640x480 panel / BaseOS
 Language: $LANGUAGE ($LANGUAGE_NAME)
 Display: SDL2 KMSDRM fullscreen + OpenGL ES; not the upstream Mali fbdev EGL path.
 This package contains the RG353PS frontend executable, BaseOS adapter,
-and the upstream 640 UI art/font bundle:
-System/Carts/, Music/, Overlay/ and Bootlogos/.
+and the upstream UI art/font bundle: System/Carts/, Music/, Overlay/ and
+Bootlogos/. The main artwork is pinned to the upstream 640x480 v2026.11.09
+release. That package omits six legacy GB/GBC/GBA theme marks still read by
+this frontend; only those six type_*.png files are supplemented from the
+checksum-pinned upstream v2026.10.02 package. No 720-layout art is imported.
 It does NOT contain or rebuild libretro emulator core libraries.
 
 Install
@@ -213,8 +216,10 @@ Panel: 640x480
 Build mode: release / features $FEATURES
 Language: $LANGUAGE ($LANGUAGE_NAME)
 Emulator cores: not built or included
-UI artwork source: RetroGame66/LUCKLUCK-SLOT v2026.11.09 640x480
-UI artwork SHA-256: 5f71f6b8f6fd1c6c4787158b1ccda7740f7b1d68b9b76948d14b71b3ed670c35
+Primary UI artwork: RetroGame66/LUCKLUCK-SLOT v2026.11.09 640x480
+Primary UI artwork SHA-256: 5f71f6b8f6fd1c6c4787158b1ccda7740f7b1d68b9b76948d14b71b3ed670c35
+Legacy theme marks: RetroGame66/LUCKLUCK-SLOT v2026.10.02 (six type_*.png only)
+Legacy marks archive SHA-256: 6c5085907d41f76bb56e5a17a67389409feb647c6fc4567aae27c9c2ae5bdb8a
 EOF
 
     ARCHIVE=/out/LUCKLUCK-SLOT-RG353PS-640x480-${PACKAGE_TAG}-${LANGUAGE}.zip

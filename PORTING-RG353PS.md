@@ -56,12 +56,13 @@ The push / manual test workflow builds **Chinese only**. The release workflow bu
 The Chinese test artifact contains:
 
 - The RG353PS-native `System/slot` binary and BaseOS launcher/`manifest.conf`.
-- `System/Carts/` from the official upstream 640×480 UI asset bundle: ten selector badges, legacy GB/GBC/GBA theme marks, cartridge templates and `carts.tsv`.
-- `Music/`, including the two runtime-loaded music-panel fonts.
-- `Overlay/` screen-mask artwork and `Bootlogos/` boot-picture assets.
-- `UPSTREAM-ASSET-SOURCE.txt` with the pinned source release and SHA-256.
+- `System/Carts/` from the upstream 640×480 UI bundle: ten selector badges, the machine-select title, default cartridge/disc art, loading/slot artwork and `carts.tsv`.
+- Six legacy GB/GBC/GBA dark/light theme marks (`type_*.png`) still read by the 640 frontend. The current 640 package omits these six, so CI supplements only these six PNGs from the older upstream package; no 720-layout art is taken.
+- `Music/`, including the two runtime-loaded music-panel fonts and their license texts.
+- `Overlay/` screen-mask artwork and `Bootlogos/` boot-picture directory.
+- `UPSTREAM-ASSET-SOURCE.txt` with both pinned archive digests.
 
-The art/font bundle is pinned to `RetroGame66/LUCKLUCK-SLOT` release `v2026.11.09`, asset `66slot-frontend-System-640480-V20261109-fix.zip`. CI verifies its SHA-256 and checks the required machine marks before packaging. Only data assets are imported: the upstream `System/slot` executable and upstream libretro cores are never copied. The RG353PS musl binary remains the one built by this repository; independently provisioned `*_libretro.so` files are not deleted or replaced.
+The primary art/font bundle is pinned to `RetroGame66/LUCKLUCK-SLOT` release `v2026.11.09`, asset `66slot-frontend-System-640480-V20261109-fix.zip` (SHA-256 `5f71f6b8…d670c35`). The six theme marks are supplemented from `v2026.10.02`, asset `slot-frontend-System-2026-10-02.zip` (SHA-256 `6c508590…b5db8a`). CI verifies both archive digests and all required asset filenames before packaging. The verified package contains 48 PNGs under `System/Carts/` and ten screen overlays. Only data assets are imported: the upstream `System/slot` executable and upstream libretro cores are never copied. The RG353PS musl binary remains the one built by this repository; independently provisioned `*_libretro.so` files are not deleted or replaced.
 
 The archive name contains the source run/tag and language. SHA-256 sidecar is generated for every artifact. When updating an existing card, back up customised `System/Carts/`, `Overlay/`, `Bootlogos/` and `Music/Fonts/` first because matching bundled defaults can be overwritten during extraction.
 
