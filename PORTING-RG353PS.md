@@ -51,8 +51,18 @@ The source supports two distinct compile-time UI variants:
 
 The push / manual test workflow builds **Chinese only**. The release workflow builds **both zh and en** from the same tagged source. Language is compiled into the binary; it is not a run-time menu switch. Core shared libraries are separate versioned assets and are not rebuilt by frontend-only builds.
 
-## CI package
+## CI package and UI assets
 
-The test artifact is frontend-only: `System/slot`, BaseOS launcher/manifest and build/source information. It does not replace or package libretro cores. The archive name contains the source run/tag and language. SHA-256 sidecar is generated for every artifact.
+The Chinese test artifact contains:
 
-Acceptance on the actual console remains separate: cold boot, display geometry/orientation, D-pad and buttons, analog stick, audio/RK817, Wi-Fi, Bluetooth, MTP/mass-storage, sleep/wake, shutdown/reboot, and actual game launch with the matching AArch64/musl core pack.
+- The RG353PS-native `System/slot` binary and BaseOS launcher/`manifest.conf`.
+- `System/Carts/` from the official upstream 640×480 UI asset bundle: ten selector badges, legacy GB/GBC/GBA theme marks, cartridge templates and `carts.tsv`.
+- `Music/`, including the two runtime-loaded music-panel fonts.
+- `Overlay/` screen-mask artwork and `Bootlogos/` boot-picture assets.
+- `UPSTREAM-ASSET-SOURCE.txt` with the pinned source release and SHA-256.
+
+The art/font bundle is pinned to `RetroGame66/LUCKLUCK-SLOT` release `v2026.11.09`, asset `66slot-frontend-System-640480-V20261109-fix.zip`. CI verifies its SHA-256 and checks the required machine marks before packaging. Only data assets are imported: the upstream `System/slot` executable and upstream libretro cores are never copied. The RG353PS musl binary remains the one built by this repository; independently provisioned `*_libretro.so` files are not deleted or replaced.
+
+The archive name contains the source run/tag and language. SHA-256 sidecar is generated for every artifact. When updating an existing card, back up customised `System/Carts/`, `Overlay/`, `Bootlogos/` and `Music/Fonts/` first because matching bundled defaults can be overwritten during extraction.
+
+Acceptance on the actual console remains separate: cold boot, display geometry/orientation, D-pad and buttons, analog stick, audio/RK817, Wi-Fi, Bluetooth, MTP/mass-storage, sleep/wake, shutdown/reboot, appearance of all ten machine badges and cartridge art, music-panel typography, and actual game launch with the matching AArch64/musl core pack.
