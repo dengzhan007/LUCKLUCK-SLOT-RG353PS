@@ -10,6 +10,12 @@ SYS="$OUT/System"
 LIC="$SYS/licenses/cores"
 LIB="$SYS/lib"
 mkdir -p "$WORK/src" "$SYS" "$LIC" "$LIB"
+for command in lddtree zip readelf gcc g++; do
+  command -v "$command" >/dev/null 2>&1 || {
+    echo "required build command missing: $command" >&2
+    exit 127
+  }
+done
 rm -f "$SYS/"*_libretro.so "$LIB/"* "$LIC/"* "$OUT/"slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip*
 
 CORE_CC="$(printenv CORE_CC || echo 'gcc -mcpu=cortex-a55')"
