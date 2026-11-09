@@ -63,6 +63,11 @@ jobs:
           grep -Fq '0x13c => Btn::Menu, // Function' /tmp/evdev-rg353ps-check.rs
           test -f baseos/platforms/rg353ps/frontends/slot/launch.sh
           test -f baseos/platforms/rg353ps/frontends/slot/manifest.conf
+          test -s baseos/platforms/rg353ps/frontends/slot/slotnet.sh
+          sh -n baseos/platforms/rg353ps/frontends/slot/slotnet.sh
+          sh -n baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-wifi-connect
+          sh -n baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
+          grep -Fqx 'export BASEOS_SLEEP=/usr/sbin/rg353ps-sleep' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'adapter_api=1' baseos/platforms/rg353ps/frontends/slot/manifest.conf
           grep -Fqx 'volume_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
           grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
