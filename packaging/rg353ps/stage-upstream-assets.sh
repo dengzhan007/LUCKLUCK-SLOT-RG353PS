@@ -47,7 +47,7 @@ if [ -z "$CARTS_DIR" ]; then
   unzip -Z1 "$ARCHIVE" | grep -iE '(^|/)(system|carts|music|overlay|bootlogos)(/|$)|SLOT_SYS|type_gb' | head -160 >&2 || :
   exit 1
 fi
-UPSTREAM_ROOT="${CARTS_DIR%/System/Carts}"
+UPSTREAM_ROOT="$(dirname "$(dirname "$CARTS_DIR")")"
 [ -d "$UPSTREAM_ROOT/Music/Fonts" ] || {
   echo "upstream archive is missing Music/Fonts" >&2
   exit 1
