@@ -678,11 +678,14 @@ impl Session {
     }
 
     fn spawn_core(&mut self, stem: &str) {
+        // ★ 2026-11-09：**当前机种的货架优先**（`App::cart_by_stem` → `Shelf::find`）。
+        //   从前这里是 `carts().iter().find(|c| c.stem == stem)`，也就是全库里**排序靠前**的
+        //   那条 —— 而同名跨机种是常态（`Games/FC/魂斗罗.nes` 恒排在 `Games/MD/魂斗罗.md`
+        //   之前），于是 MD 货架上选中的那张卡会拉起 NES 核心、跑 FC 的 rom。玩家报的
+        //   「加载 MD 游戏时显示的是 FC 卡带且进去也是 FC」正是从这里进去的。
         let Some((rom, system)) = self
             .app
-            .carts()
-            .iter()
-            .find(|c| c.stem == stem)
+            .cart_by_stem(stem)
             .map(|c| (c.rom.clone(), c.system()))
         else {
             return;

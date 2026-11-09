@@ -2712,13 +2712,32 @@ impl App {
         // open the shelf that holds it — and a stored shelf the card has no carts for is
         // skipped, so a card whose only games are, say, GB never opens on an empty GBA shelf.
         app.overlay_indices = crate::root::overlay_indices(root);
+        // ★ 2026-11-09：同名跨机种时，**不能拿全库第一条**。库里不去重（`Games/FC/魂斗罗.nes`
+        //   与 `Games/MD/魂斗罗.md` 是两条，stem 都是 `魂斗罗`），而 `order` 以路径兜底 ⇒
+        //   `Games/FC/…` 恒在前（`F` < `M`）。从前这里就是全库 `find`，于是上次玩的是 MD 的
+        //   魂斗罗，开机却打开 FC 的货架、续玩的也是 FC 那张卡 —— 与玩家报的
+        //   「加载 MD 游戏时显示的是 FC 卡带且进去也是 FC」同一条根因。
+        //   消歧用卡上的 `System/shelf.txt`（上次浏览的机种）：那张卡就是从那个货架插进去的。
+        //   它只在"有几条同名"时才被问到，唯一匹配与从前完全一样。
+        let stored = crate::root::shelf_system(root);
         let last_system = app
             .state
             .cart
             .as_deref()
-            .and_then(|stem| app.shelf.carts.iter().find(|c| c.stem == stem))
+            .and_then(|stem| {
+                let same: Vec<&_> = app.shelf.carts.iter().filter(|c| c.stem == stem).collect();
+                match same.len() {
+                    0 => None,
+                    1 => same.first().copied(),
+                    _ => same
+                        .iter()
+                        .copied()
+                        .find(|c| c.system() == stored)
+                        .or_else(|| same.first().copied()),
+                }
+            })
             .map(|c| c.system());
-        let mut system = last_system.unwrap_or_else(|| crate::root::shelf_system(root));
+        let mut system = last_system.unwrap_or(stored);
         if !app.shelf.carts.iter().any(|c| c.system() == system) {
             // ★ 2026-10-25：**改用 `root::MACHINES`，不再手抄。** 这一格原来是一份手写的
             //   七机种列表，加 MD/PS1 时很容易漏 —— 漏了不会编译失败，只会让「上一张卡的
@@ -4886,6 +4905,18 @@ impl App {
         &self.row().carts
     }
 
+    /// 名字反查一张卡，**先问当前货架的机种**（见 `Shelf::find`）。
+    ///
+    /// ★ 2026-11-09：凡"手上只有一个 stem"的地方都该走这里，不要再
+    /// `carts().iter().find(|c| c.stem == stem)` —— 那是在全库里取**排序靠前**的那条，
+    /// 而同名跨机种是常态（`Games/FC/魂斗罗.nes` 与 `Games/MD/魂斗罗.md`，`F` < `M`
+    /// ⇒ 永远先命中 FC）。玩家报的「加载 MD 游戏时显示的是 FC 卡带且进去也是 FC」
+    /// 就是这条路径串的：`insert` 把选中的 cart 压成 stem 之后，插卡动画与核心启动
+    /// 都只能靠名字反查。
+    pub fn cart_by_stem(&self, stem: &str) -> Option<&Cart> {
+        self.shelf.find(stem).map(|(c, _)| c)
+    }
+
     /// Which cart the caret is on. Read by the boot path to decide which faces are worth
     /// rasterising before the first frame, and by the background filler to order the rest.
     pub fn shelf_index(&self) -> usize {
@@ -6979,13 +7010,9 @@ impl App {
                 // ★ 2026-10-26（六六）：PS1 光盘五拍弹出要走满 `DISC_EJECT_S`（1.23 s），
                 //   普通卡带用 `EJECT_S`（0.45 s）。两者各管各的时长。
                 //   `system_of` 借整块 self，在 `&mut self.phase` 里会撞借；直接读
-                //   `self.shelf`（与 phase 不相交）绕过。
-                let system = self
-                    .shelf
-                    .carts
-                    .iter()
-                    .find(|c| c.stem == *cart)
-                    .map(|c| c.system());
+                //   `self.shelf`（与 phase 不相交）绕过。★ 2026-11-09：改走 `Shelf::find`
+                //   （当前机种优先），否则同名跨机种时弹出时长按另一台机器的卡算。
+                let system = self.shelf.find(cart.as_str()).map(|(c, _)| c.system());
                 let is_disc = system == Some(slot_store::System::Ps1);
                 let limit = if is_disc {
                     DISC_EJECT_S
@@ -8551,7 +8578,9 @@ impl App {
     ///   没有则用 `Cart.art`（完整光盘图）兜底。PS1 游戏通常没有贴纸但有整张光盘图。
     pub(crate) fn disc_face_path(&self) -> Option<PathBuf> {
         let stem = self.disc_face_stem()?;
-        let cart = self.shelf.carts.iter().find(|c| c.stem == stem)?;
+        // ★ 2026-11-09：当前机种优先（`Shelf::find`）。同名跨机种时，从前这里拿的是
+        //   排序靠前那条的封面 —— 与"进去也是 FC"同一个根因。
+        let (cart, _) = self.shelf.find(&stem)?;
         cart.label.clone().or_else(|| cart.art.clone())
     }
 
@@ -10302,9 +10331,25 @@ impl App {
             ShelfRow::Discs => return self.open_disc_deck(),
             ShelfRow::Games => {}
         }
-        let Some(cart) = self.row().current_cart().map(|c| c.stem.clone()) else {
+        let Some((cart, rom)) = self
+            .row()
+            .current_cart()
+            .map(|c| (c.stem.clone(), c.rom.clone()))
+        else {
             return;
         };
+        // ★ 2026-11-09：**同一机种里重号仍会串**（两个子文件夹各放一份同名 rom）。这一版只修
+        //   跨机种，同机种那种取的是排在前面的那条 —— 选了 B 进去是 A，而且完全无声。
+        //   在这里说一句，别让它再静默：有这行日志就说明卡上确实重号了。
+        if let Some((found, _)) = self.shelf.find(&cart) {
+            if found.rom != rom {
+                eprintln!(
+                    "slot: 同名卡 {cart}：选中的是 {}，反查到的是 {}",
+                    rom.display(),
+                    found.rom.display()
+                );
+            }
+        }
         self.play_held = None;
         self.refusal = None;
         self.refused_from = None;
@@ -12610,12 +12655,11 @@ impl App {
     /// The machine of the cart that owns `stem` — the folder its save and its states live under.
     /// Read from the shelf rather than kept on `App`, because the shelf already carries every
     /// cart's machine and a second copy is exactly the thing that drifts.
+    ///
+    /// ★ 2026-11-09：走 `cart_by_stem`（当前机种优先）。从前这里是全库 `find` —— 同名跨机种时
+    ///   存档 / 即时存档目录会被指到另一台机器的同名卡上，与"进去也是 FC"同一个根因。
     fn system_of(&self, stem: &str) -> Option<System> {
-        self.shelf
-            .carts
-            .iter()
-            .find(|c| c.stem == stem)
-            .map(|c| c.system())
+        self.cart_by_stem(stem).map(|c| c.system())
     }
 
     fn ring(&self) -> Option<StateRing> {

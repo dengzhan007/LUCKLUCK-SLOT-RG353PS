@@ -813,3 +813,52 @@ fn a_still_cart_is_a_plain_quad() {
     // 720 宽只放得下三张（侧-中-侧），要看的是**它们全都是普通 quad**，不是数量本身。
     assert_eq!(faces, 3, "中间那一排三张卡都该是普通 quad，现在有 {faces} 张");
 }
+
+/// ★ 2026-11-09（玩家实报）：**同名跨机种，反查要先问自己机种的货架。**
+///
+/// 症状原话：「加载 MD 游戏时显示的是 FC 卡带且进去也是 FC」。库里不去重
+/// （`Games/FC/Contra.nes` 与 `Games/MD/Contra.md` 是两条，stem 都是 `Contra`），
+/// 而全库 `position` 只会答**排序靠前**的那条 —— `order` 以路径兜底，`Games/FC/…`
+/// 恒在 `Games/MD/…` 前面（`F` < `M`）。于是 MD 货架上按下 A 之后，插卡动画画的、
+/// 核心跑的全成了 FC 那张卡：`insert` 只把选中的 cart 压成 stem，之后全靠名字反查。
+#[test]
+fn a_name_shared_across_machines_resolves_on_its_own_shelf() {
+    let cart = |stem: &str, rom: &str| Cart {
+        initial: 'C',
+        stem: stem.into(),
+        rom: rom.into(),
+        label: None,
+        art: None,
+        code: String::new(),
+        cgb: 0,
+        title: stem.to_uppercase(),
+    };
+    // 库里的顺序就是 `order` 排出来的顺序：路径靠前的那条在前。
+    let mut s = Shelf::new(vec![
+        cart("Contra", "Games/FC/Contra.nes"),
+        cart("Contra", "Games/MD/Contra.md"),
+        cart("Metroid", "Games/GBA/Metroid.gba"),
+    ]);
+
+    // 两条同名都还在库里 —— 修的是"取对"，不是去重。
+    assert_eq!(s.carts.iter().filter(|c| c.stem == "Contra").count(), 2);
+
+    // MD 的货架上，名字答的是 MD 那张。
+    s.set_system(slot_store::System::Md);
+    let (found, _) = s.find("Contra").expect("MD 货架上该找得到");
+    assert_eq!(
+        found.system(),
+        slot_store::System::Md,
+        "MD 货架上按 A，反查到的必须是 MD 那张（从前会答 FC，因为 `Games/FC/…` 排在前面）"
+    );
+
+    // FC 的货架上，名字答的是 FC 那张。
+    s.set_system(slot_store::System::Fc);
+    let (found, _) = s.find("Contra").expect("FC 货架上该找得到");
+    assert_eq!(found.system(), slot_store::System::Fc);
+
+    // 当前机种里没这个名字时仍要退到全库 —— 换机种、退卡途中都不该落空。
+    s.set_system(slot_store::System::Md);
+    let (found, _) = s.find("Metroid").expect("别的机种的卡也要找得到");
+    assert_eq!(found.system(), slot_store::System::Gba);
+}

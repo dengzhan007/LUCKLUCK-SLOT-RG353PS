@@ -453,10 +453,32 @@ impl Shelf {
         }
     }
 
-    /// In `hints` order.
+    /// The cart filed under `stem`, **looked for on this shelf's own machine first**.
+    ///
+    /// ★ 2026-11-09：名字不是唯一的键，而全库 `position` 只会答**排序靠前的那条**。
+    ///   `Games/FC/魂斗罗.nes` 与 `Games/MD/魂斗罗.md` 的 stem 都是 `魂斗罗`，库里不去重
+    ///   （`slot_store::scan::build` 逐条 push），`order` 又以路径兜底 —— 于是 `Games/FC/…`
+    ///   恒排在 `Games/MD/…` 前面（`F` < `M`）。玩家实报的症状就是这个：「加载 MD 游戏时
+    ///   显示的是 FC 卡带且进去也是 FC」—— MD 货架上按下 A 之后，插卡动画画的
+    ///   （`App::chrome_with`）、核心跑的都是（`Session::spawn_core`）FC 那张卡。
+    ///
+    ///   所以先在同一机种的货架 `machines[]` 里找，找不到才退到全库。退到全库这一步要留着：
+    ///   调用方拿到的 stem 未必属于当前货架的机种（换机种、退卡途中都不该落空）。
+    ///
+    ///   ⚠️ 只修**跨机种**串档。同一台机器里重号（两个子文件夹各放一份同名 rom）仍取靠前
+    ///   那条 —— 那是卡自己的排法，六六 2026-11-09 拍板「同机种不串就行」。
     pub fn find(&self, stem: &str) -> Option<(&Cart, Option<TexId>)> {
-        let i = self.carts.iter().position(|c| c.stem == stem)?;
+        let i = self.find_index(stem)?;
         Some((&self.carts[i], self.faces.get(i).copied().flatten()))
+    }
+
+    /// 名字 → 库索引，**当前机种的货架优先**。见 [`Self::find`]。
+    fn find_index(&self, stem: &str) -> Option<usize> {
+        let own = &self.machines[Self::machine_slot(self.system)];
+        if let Some(&i) = own.iter().find(|&&i| self.carts[i].stem == stem) {
+            return Some(i);
+        }
+        self.carts.iter().position(|c| c.stem == stem)
     }
 
     /// The position of a cart in the current *view*, by stem — i.e. what `index` counts in.

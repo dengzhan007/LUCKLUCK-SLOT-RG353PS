@@ -3243,15 +3243,16 @@ fn sync_core_picker(
     built: &mut Option<String>,
 ) {
     let highlighted = app.selected_stem().map(str::to_string);
-    if highlighted.is_some() && *asked != highlighted {
-        if let Some(cart) = app
-            .carts()
-            .iter()
-            .find(|c| highlighted.as_deref() == Some(c.stem.as_str()))
-        {
-            builder.request(cart.clone());
+    // ★ 2026-11-09：当前机种优先（`App::cart_by_stem`）。全库 `find` 在同名跨机种时会拿到
+    //   排序靠前的那条 —— `Games/FC/…` 恒在 `Games/GBA/…` 之前（`F` < `G`），于是这张
+    //   GBA 卡的核心板会用 FC 那条的贴纸去烘。
+    if let Some(stem) = highlighted.as_deref() {
+        if *asked != highlighted {
+            if let Some(cart) = app.cart_by_stem(stem) {
+                builder.request(cart.clone());
+            }
+            *asked = highlighted.clone();
         }
-        *asked = highlighted.clone();
     }
     let Some(faces) = builder.take() else {
         return;

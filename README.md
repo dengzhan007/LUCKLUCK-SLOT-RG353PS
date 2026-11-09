@@ -33,7 +33,7 @@ naming step:
    the Anbernic RG SP, MIT-licensed. It only ever ran Game Boy Advance. In November 2026 upstream
    moved from `BrandonKowalski/slot` to the **`slot-cfw`** organisation and broadened into a
    Game-Boy-centric CFW; this fork is still based on the GBA-era commit below.
-2. **The fork.** This repository is now **`RetroGame66/66slot`**, branch **`66-mods`**, based on
+2. **The fork.** This repository is now **`RetroGame66/LUCKLUCK-SLOT`**, branch **`66-mods`**, based on
    upstream `4345cb8b` (2026-09-11), maintained by *你的六六*. It was `RetroGame66/slot` until
    2026-11-09.
 3. **Base-OS swap.** The fork was first deployed on **AGS-102** — Brandon Kowalski's RG-SP-specific
@@ -42,7 +42,9 @@ naming step:
    BaseOS. Link play and networking were moved to on-card scripts so the code is base-OS-agnostic.
 4. **Naming.** On **2026-10-26** the project's *display* name was set to **LUCKLUCK SLOT**,
    abbreviated **66slot**; on **2026-11-09** the repository followed (`RetroGame66/slot` →
-   `RetroGame66/66slot`). What did **not** change is the code inside: the crates are still `slot`,
+   `RetroGame66/LUCKLUCK-SLOT`). The repository carries the full name; the abbreviation stays
+   where it is a prefix rather than a title — the release zips (`66slot-frontend-…`) and the
+   interface. What did **not** change is the code inside: the crates are still `slot`,
    `slot-ui`, `slot-store`…, the binary on the card is still `System/slot`, and the state file is
    still `System/slot.state`. Those are internals — renaming them would break every card already in
    the field and buy a reader nothing. **"slot" in a path is the code name, not the old name.**
@@ -53,7 +55,7 @@ naming step:
 
 > **中文**：本项目派生自上游 slot（原作仅为 RG SP 的 GBA 前端，MIT；上游已于 2026-11 从
 > `BrandonKowalski/slot` 迁至 [`slot-cfw/slot`](https://github.com/slot-cfw/slot)）。fork 仓库为
-> `RetroGame66/66slot`（原 `RetroGame66/slot`）的 `66-mods` 分支，由「你的六六」维护。早期底座用
+> `RetroGame66/LUCKLUCK-SLOT`（原 `RetroGame66/slot`）的 `66-mods` 分支，由「你的六六」维护。早期底座用
 > AGS-102（BaseOS 的 RG SP 分支），2026-10-24 起改以 **BaseOS** 为底座（AGS-102 功能并入上游且停更）。
 > 2026-10-26 项目展示名定为 **LUCKLUCK SLOT（缩写 66slot）**，2026-11-09 仓库随之改名。**代码里
 > 没有跟着改**：crate 仍叫 `slot` / `slot-ui` / `slot-store`，卡上二进制仍是 `System/slot`，
@@ -118,7 +120,7 @@ GB and GBC run on the frontend's built-in Game Boy core, which is not user-switc
 
 ## Downloads
 
-Packages live on the [Releases page](https://github.com/RetroGame66/66slot/releases). Each release
+Packages live on the [Releases page](https://github.com/RetroGame66/LUCKLUCK-SLOT/releases). Each release
 carries:
 
 - `66slot-frontend-System-*.zip` — the frontend `System/` tree (Chinese build). Releases before
