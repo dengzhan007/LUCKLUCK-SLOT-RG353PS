@@ -41,9 +41,11 @@ esac
 WORK="${RG353PS_WORK:-$REPO_ROOT/work/rg353ps}"
 OUT="$WORK/frontends"
 SRC_HOST="$WORK/slot-src"
+ASSET_STAGE="$WORK/upstream-ui-assets"
 IMAGE="${SLOT_BUILD_IMAGE:-slot-66-rg353ps-build:rust-1.96}"
 
 mkdir -p "$OUT" "$WORK/cargo-registry" "$WORK/cargo-git" "$WORK/cargo-target"
+sh "$HERE/stage-upstream-assets.sh" "$WORK" "$ASSET_STAGE"
 rm -rf "$SRC_HOST"
 mkdir -p "$SRC_HOST"
 git -C "$REPO_ROOT" archive --format=tar HEAD | tar -xf - -C "$SRC_HOST"
@@ -66,6 +68,7 @@ docker run --rm --network host --platform linux/arm64 \
   -v "$SRC_HOST:/slot-up:ro" \
   -v "$FRONTEND_PORT:/slot-port:ro" \
   -v "$HERE:/slot-build:ro" \
+  -v "$ASSET_STAGE:/upstream-assets:ro" \
   -v "$OUT:/out" \
   -v "$WORK/cargo-registry:/usr/local/cargo/registry" \
   -v "$WORK/cargo-git:/usr/local/cargo/git" \
@@ -139,6 +142,32 @@ docker run --rm --network host --platform linux/arm64 \
     tar --exclude=.git -czf "$PKG/System/licenses/slot-rg353ps-$SLOT_REV-source.tar.gz" -C "$SRC" .
     "$PKG/System/slot" --init-root "$PKG"
 
+    # The upstream 640 release carries the UI resources as external card files.
+    # Import only those data assets; retain the native RG353PS binary and never
+    # replace separately provisioned libretro cores.
+    cp -a /upstream-assets/System/Carts "$PKG/System/"
+    for asset_dir in Music Overlay Bootlogos; do
+      test -d "/upstream-assets/$asset_dir"
+      cp -a "/upstream-assets/$asset_dir" "$PKG/"
+    done
+    if [ -s /upstream-assets/System/boot_opening.slotvid ]; then
+      cp -a /upstream-assets/System/boot_opening.slotvid "$PKG/System/"
+    fi
+    cp /upstream-assets/UPSTREAM-ASSET-SOURCE.txt "$PKG/"
+
+    # Catch an incomplete distribution package before it reaches the SD card.
+    for machine in GBA GB GBC SFC FC NEOGEO ARCADE MD PS1 PCE; do
+      test -s "$PKG/System/Carts/SLOT_SYS_$machine.png"
+    done
+    for icon in type_gb.png type_gbc.png type_gba.png \
+                type_gb_light.png type_gbc_light.png type_gba_light.png; do
+      test -s "$PKG/System/Carts/$icon"
+    done
+    test -s "$PKG/Music/Fonts/unifont-16px.otf"
+    test -s "$PKG/Music/Fonts/press-start-2p.ttf"
+    test -d "$PKG/Overlay"
+    test -d "$PKG/Bootlogos"
+
     cat > "$PKG/README-RG353PS.txt" <<EOF
 LUCKLUCK SLOT / 66slot - RG353PS 640x480 ${LANGUAGE} build
 ========================================================
@@ -146,15 +175,19 @@ LUCKLUCK SLOT / 66slot - RG353PS 640x480 ${LANGUAGE} build
 Target: Anbernic RG353PS / RK3566 / 640x480 panel / BaseOS
 Language: $LANGUAGE ($LANGUAGE_NAME)
 Display: SDL2 KMSDRM fullscreen + OpenGL ES; not the upstream Mali fbdev EGL path.
-This package contains the frontend executable and BaseOS adapter only.
+This package contains the RG353PS frontend executable, BaseOS adapter,
+and the upstream 640 UI art/font bundle:
+System/Carts/, Music/, Overlay/ and Bootlogos/.
 It does NOT contain or rebuild libretro emulator core libraries.
 
 Install
 -------
 Extract this ZIP into the root of the same user-data partition that contains
-your Games and System directories. Merge/overwrite when prompted. Back up
-saves first. Existing System/*_libretro.so files are not deleted or replaced.
-The package replaces System/slot and installs the Slot frontend adapter files.
+your Games and System directories. Merge the directories. Back up saves first.
+Existing System/*_libretro.so files are not deleted or replaced. The package
+replaces System/slot and installs Slot adapter and default UI asset files.
+Before updating an existing customised card, back up System/Carts/, Overlay/,
+Bootlogos/ and Music/Fonts/; matching paths in the package may overwrite them.
 
 Resolution
 ----------
@@ -180,6 +213,8 @@ Panel: 640x480
 Build mode: release / features $FEATURES
 Language: $LANGUAGE ($LANGUAGE_NAME)
 Emulator cores: not built or included
+UI artwork source: RetroGame66/LUCKLUCK-SLOT v2026.11.09 640x480
+UI artwork SHA-256: 5f71f6b8f6fd1c6c4787158b1ccda7740f7b1d68b9b76948d14b71b3ed670c35
 EOF
 
     ARCHIVE=/out/LUCKLUCK-SLOT-RG353PS-640x480-${PACKAGE_TAG}-${LANGUAGE}.zip
