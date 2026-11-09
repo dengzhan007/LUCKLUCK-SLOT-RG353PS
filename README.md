@@ -14,7 +14,7 @@
 > The BaseOS launcher/manifest and USB ownership remain with BaseOS; the existing card-side
 > MTP helper hook is retained. Test CI builds Simplified Chinese only; tagged releases build
 > separate Chinese and English binaries. Libretro cores are a separate reusable package
-> ([core pack v1.0.0](https://github.com/dengzhan007/slot-66/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)).
+> ([core pack v1.0.0](https://github.com/dengzhan007/LUCKLUCK-SLOT-RG353PS/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)).
 >
 > **Branch `66-mods-640` — the 640×480 edition.** The `66-mods` branch is the 720×480 tree
 > (RG SP, RG34XX, RG34XXSP and the rest of the 720 group); this branch is the same frontend laid
