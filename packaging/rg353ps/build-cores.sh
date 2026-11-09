@@ -10,7 +10,7 @@ SYS="$OUT/System"
 LIC="$SYS/licenses/cores"
 LIB="$SYS/lib"
 mkdir -p "$WORK/src" "$SYS" "$LIC" "$LIB"
-rm -f "$SYS/"*_libretro.so "$OUT/"slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip*
+rm -f "$SYS/"*_libretro.so "$LIB/"* "$LIC/"* "$OUT/"slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip*
 
 CORE_CC="$(printenv CORE_CC || echo 'gcc -mcpu=cortex-a55')"
 CORE_CXX="$(printenv CORE_CXX || echo 'g++ -mcpu=cortex-a55')"
@@ -233,7 +233,10 @@ EOF
 
 (
   cd "$OUT"
-  sha256sum System/*_libretro.so System/lib/* 2>/dev/null > CORE-SHA256SUMS.txt
+  : > CORE-SHA256SUMS.txt
+  for file in System/*_libretro.so System/lib/*; do
+    [ -f "$file" ] && sha256sum "$file" >> CORE-SHA256SUMS.txt
+  done
   zip -qr slot-66-rg353ps-cores-aarch64-musl-v1.0.0.zip \
     System README-RG353PS-CORES.txt CORE-BUILD-INFO.txt \
     CORE-RUNTIME-DEPENDENCIES.txt CORE-SHA256SUMS.txt
