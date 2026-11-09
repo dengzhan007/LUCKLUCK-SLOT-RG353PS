@@ -26,6 +26,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore compiled core source and object cache
+        uses: actions/cache@v4
+        with:
+          path: .core-work
+          key: rg353ps-core-build-aarch64-musl-v1.0.0-${{ runner.os }}-${{ hashFiles('packaging/rg353ps/build-cores.sh', 'packaging/rg353ps/cores.Dockerfile') }}
+          restore-keys: |
+            rg353ps-core-build-aarch64-musl-v1.0.0-${{ runner.os }}-
+
       - name: Build AArch64 musl core pack (native ARM64 runner)
         shell: bash
         run: |
