@@ -28,23 +28,24 @@ This is a backend substitution, not a new resolution implementation. Do not subs
 
 ## 2. RG353PS input adaptation
 
-The build applies the BaseOS-maintained patches in this order:
+The branch-owned `packaging/rg353ps/apply-rg353ps-input.py` applies narrowly scoped, checked replacements to the current upstream `evdev.rs`:
 
-1. \`slot-rg353ps.patch\`: RG353PS GPIO/gamepad button matrix, D-pad and left-stick menu navigation; ADC stick centre is 519.
-2. \`slot-power.patch\`: frontend ownership of Linux \`KEY_POWER=116\`, including the evdev capability filter so the power-only input node is not skipped.
+- RG353PS ADC stick range `15..1023`, centre `519`, vertical polarity, and left-stick menu navigation.
+- The RG353PS face-button / shoulder / D-pad / Function key matrix.
+- Linux `KEY_POWER=116` mapping and inclusion in the evdev capability filter, so the power-only event node is opened.
 
-Both patches are checked with \`git apply --check\` before application. The older standalone analog passthrough patch is not applied in this first build.
+The script keeps upstream's newer `AxisMap`, event decoding, device discovery and input threading unchanged. It aborts if its expected source anchors or postconditions do not match; the previous whole-file BaseOS patches are deliberately not applied to this newer upstream revision.
 
-BaseOS adapter ownership is declared by \`manifest.conf\`:
+BaseOS adapter ownership is declared by `manifest.conf`:
 
-\`\`\`ini
+```ini
 adapter_api=1
 priority=100
 volume_owner=frontend
 power_owner=frontend
-\`\`\`
+```
 
-The package carries identical copies of the manifest and launcher under both \`.baseos/frontends/slot/\` and \`baseos/frontends/slot/\`. The launcher retains \`# baseos: volume-owned\` and \`# baseos: power-owned\` markers.
+The package carries identical copies of the manifest and launcher under both `.baseos/frontends/slot/` and `baseos/frontends/slot/`. The launcher retains `# baseos: volume-owned` and `# baseos: power-owned` markers.
 
 ## 3. Runtime contract
 
