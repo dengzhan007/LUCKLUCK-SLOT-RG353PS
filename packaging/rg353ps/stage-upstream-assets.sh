@@ -82,10 +82,55 @@ for file in type_gb.png type_gbc.png type_gba.png \
   fi
 done
 if [ -n "$MISSING_MACHINE_MARKS" ]; then
-  echo "upstream 640 bundle omits legacy machine marks:$MISSING_MACHINE_MARKS" >&2
-  echo "Present System/Carts artwork:" >&2
-  find "$CARTS_DIR" -maxdepth 2 -type f -printf '%P\n' | sort >&2
+  # The 2026-11-09 640 release currently omits these six files even though the
+  # frontend still reads them for the lower-left machine marks. The upstream
+  # 2026-10-02 package explicitly added the complete dark/light pair. Import
+  # ONLY these six generic 75x25 RGBA PNGs as a compatibility supplement; do
+  # not take its 720-layout badges, card art, fonts, masks or executable.
+  LEGACY_TAG="v2026.10.02"
+  LEGACY_NAME="slot-frontend-System-2026-10-02.zip"
+  LEGACY_SHA256="6c5085907d41f76bb56e5a17a67389409feb647c6fc4567aae27c9c2ae5bdb8a"
+  LEGACY_ARCHIVE="$WORK/$LEGACY_NAME"
+  LEGACY_TMP="$LEGACY_ARCHIVE.part"
+  LEGACY_EXTRACT="$WORK/upstream-legacy-icons-extract"
+  if [ ! -s "$LEGACY_ARCHIVE" ] || ! printf '%s  %s\n' "$LEGACY_SHA256" "$LEGACY_ARCHIVE" | sha256sum -c - >/dev/null 2>&1; then
+    rm -f "$LEGACY_ARCHIVE" "$LEGACY_TMP"
+    echo "== fetching upstream legacy theme marks: $LEGACY_TAG =="
+    curl --fail --location --retry 3 --retry-all-errors --silent --show-error \
+      "https://github.com/RetroGame66/LUCKLUCK-SLOT/releases/download/$LEGACY_TAG/$LEGACY_NAME" \
+      -o "$LEGACY_TMP"
+    printf '%s  %s\n' "$LEGACY_SHA256" "$LEGACY_TMP" | sha256sum -c -
+    mv "$LEGACY_TMP" "$LEGACY_ARCHIVE"
+  fi
+  printf '%s  %s\n' "$LEGACY_SHA256" "$LEGACY_ARCHIVE" | sha256sum -c -
+  rm -rf "$LEGACY_EXTRACT"
+  mkdir -p "$LEGACY_EXTRACT"
+  unzip -q "$LEGACY_ARCHIVE" -d "$LEGACY_EXTRACT"
+  LEGACY_CARTS_DIR="$(find "$LEGACY_EXTRACT" -type d -ipath '*/System/Carts' -print -quit)"
+  [ -n "$LEGACY_CARTS_DIR" ] || {
+    echo "legacy upstream package has no System/Carts directory" >&2
+    exit 1
+  }
+  for file in type_gb.png type_gbc.png type_gba.png \
+              type_gb_light.png type_gbc_light.png type_gba_light.png; do
+    if [ ! -s "$CARTS_DIR/$file" ]; then
+      [ -s "$LEGACY_CARTS_DIR/$file" ] || {
+        echo "legacy upstream package is missing required machine mark: $file" >&2
+        exit 1
+      }
+      cp -p "$LEGACY_CARTS_DIR/$file" "$CARTS_DIR/$file"
+    fi
+  done
+  echo "Added missing legacy machine marks from $LEGACY_TAG ($LEGACY_SHA256)"
 fi
+
+for file in type_gb.png type_gbc.png type_gba.png \
+            type_gb_light.png type_gbc_light.png type_gba_light.png; do
+  [ -s "$CARTS_DIR/$file" ] || {
+    echo "required machine mark is still missing: $file" >&2
+    exit 1
+  }
+done
 
 # These are runtime-loaded by the music deck, not embedded in System/slot.
 for file in unifont-16px.otf press-start-2p.ttf; do
@@ -98,7 +143,7 @@ done
 # Only copy data assets. Keep the RG353PS-compiled System/slot, any separately
 # supplied core libraries and all user files out of this import path.
 mkdir -p "$STAGE/System"
-cp -a "$UPSTREAM_ROOT/System/Carts" "$STAGE/System/"
+cp -a "$CARTS_DIR" "$STAGE/System/Carts"
 cp -a "$UPSTREAM_ROOT/Music" "$STAGE/"
 cp -a "$UPSTREAM_ROOT/Overlay" "$STAGE/"
 cp -a "$UPSTREAM_ROOT/Bootlogos" "$STAGE/"
@@ -113,6 +158,7 @@ Package: $ASSET_NAME
 SHA-256: $ASSET_SHA256
 Imported paths: System/Carts, Music, Overlay, Bootlogos
 Missing legacy machine marks:$MISSING_MACHINE_MARKS
+Legacy mark supplement: RetroGame66/LUCKLUCK-SLOT $LEGACY_TAG (only six type_*.png files, sha256 $LEGACY_SHA256)
 Not imported: System/slot, libretro cores, saves, ROMs or user content
 EOF
 find "$STAGE/System/Carts" -maxdepth 2 -type f -printf '%P\\n' | sort > "$STAGE/UPSTREAM-CARTS-INDEX.txt"
