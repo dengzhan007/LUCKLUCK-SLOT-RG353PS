@@ -62,7 +62,10 @@ new_stick = """        let axis = match ev.code {
             ABS_Y | ABS_RY => 1,
             _ => return Vec::new(),
         };
-        let raw = calibrated_axis_value(ev.code, ev.value);"""
+        // Both RG353PS vertical ADC axes report positive while pushed upward;
+        // upstream Slot defines positive Y as Down, so preserve the device polarity fix.
+        let polarity = if ev.code == ABS_Y || ev.code == ABS_RY { -1 } else { 1 };
+        let raw = calibrated_axis_value(ev.code, ev.value) * polarity;"""
 replace_once(old_stick, new_stick, "four-axis RG353PS feed")
 
 # Keep the tested RG353PS physical key table.
@@ -129,12 +132,12 @@ new_tests = """    #[test]
         for (code, center, edge, expected) in [
             (ABS_X, 527, 1023, RawEvent::Down(Btn::Right)),
             (ABS_X, 527, 15, RawEvent::Down(Btn::Left)),
-            (ABS_Y, 505, 1023, RawEvent::Down(Btn::Down)),
-            (ABS_Y, 505, 15, RawEvent::Down(Btn::Up)),
+            (ABS_Y, 505, 1023, RawEvent::Down(Btn::Up)),
+            (ABS_Y, 505, 15, RawEvent::Down(Btn::Down)),
             (ABS_RX, 517, 1023, RawEvent::Down(Btn::Right)),
             (ABS_RX, 517, 15, RawEvent::Down(Btn::Left)),
-            (ABS_RY, 542, 1023, RawEvent::Down(Btn::Down)),
-            (ABS_RY, 542, 15, RawEvent::Down(Btn::Up)),
+            (ABS_RY, 542, 1023, RawEvent::Down(Btn::Up)),
+            (ABS_RY, 542, 15, RawEvent::Down(Btn::Down)),
         ] {
             let mut stick = Stick::default();
             let events = feed(&mut stick, code, &[center, edge]);
