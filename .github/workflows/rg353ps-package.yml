@@ -17,7 +17,7 @@ on:
       baseos_ref:
         description: "BaseOS-RG353PS ref used for the device adapter"
         required: true
-        default: "d29f413bf6a468a63558254b4b93439a4e00587f"
+        default: "4dab1be955fa39d9134ffb7d272b22fa7eeee2d7"
 
 permissions:
   contents: read
@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dengzhan007/BaseOS-RG353PS
-          ref: ${{ inputs.baseos_ref || 'd29f413bf6a468a63558254b4b93439a4e00587f' }}
+          ref: ${{ inputs.baseos_ref || '4dab1be955fa39d9134ffb7d272b22fa7eeee2d7' }}
           path: baseos
 
       - name: Validate native 640 tree and BaseOS adapter
@@ -102,7 +102,7 @@ jobs:
       - name: Build Chinese test ZIP only
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
-          BASEOS_REF: ${{ inputs.baseos_ref || 'd29f413bf6a468a63558254b4b93439a4e00587f' }}
+          BASEOS_REF: ${{ inputs.baseos_ref || '4dab1be955fa39d9134ffb7d272b22fa7eeee2d7' }}
           SLOT_REV: ${{ github.sha }}
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
