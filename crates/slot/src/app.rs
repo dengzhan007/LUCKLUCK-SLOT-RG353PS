@@ -11049,18 +11049,17 @@ impl App {
                     eprintln!("slot: could not start BaseOS deep suspend ({}): {error}; restoring fallback timeout", path.display());
                     self.native_suspend_active = false;
                     self.baseos_sleep = None;
-                // Native suspend failed, so the frontend fallback owns the display again.
-                if let Some(power) = &mut self.power {
-                    power.on_close();
-                }
-                let timeout = self.doze_timeout();
+                    // Native suspend failed, so the frontend fallback owns the display again.
+                    if let Some(power) = &mut self.power {
+                        power.on_close();
+                    }
+                    let timeout = self.doze_timeout();
                     if let Some(power) = &mut self.power {
                         power.set_timeout(timeout);
                     }
                 }
             }
         }
-    }
 
     fn wake(&mut self) {
         let restore_frontend_backlight = self.frontend_owns_backlight();
