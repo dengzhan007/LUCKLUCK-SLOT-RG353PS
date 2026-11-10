@@ -46,7 +46,7 @@ The GBA picker has two physical socket positions. The existing eight-core `Core:
 
 ## RG353PS power and Wi-Fi integration
 
-The BaseOS launcher exports BASEOS_SLEEP=/usr/sbin/rg353ps-sleep. Slot uses this on a user power tap after flushing resume state and blanking the panel. On RG353PS the settings row reports **System Deep Suspend**; legacy doze_min values on existing cards no longer cause an idle poweroff. If the helper cannot be spawned, Slot falls back to the generic frontend timeout instead of remaining dark indefinitely. Long-press shutdown remains a separate poweroff path.
+The BaseOS launcher exports BASEOS_SLEEP=/usr/sbin/rg353ps-sleep. Slot flushes resume state and starts this helper on a user power tap. For this native-suspend path, **BaseOS alone owns physical backlight blanking and restoration**: the helper captures the current sysfs brightness before setting it to zero and restores that value after resume. Slot must not call Power::on_close() before spawning the helper (that would make the captured restore value zero), and must not call Power::on_open() after native resume (the frontend's remembered level can still be its default zero). If the helper cannot be spawned, Slot falls back to its generic LidPolicy backlight handling and timeout instead of remaining dark indefinitely. Long-press shutdown remains a separate poweroff path.
 
 Wi-Fi follows the upstream BaseOS ownership model:
 
