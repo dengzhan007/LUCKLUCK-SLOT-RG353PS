@@ -48,6 +48,20 @@ if [ -z "$CARTS_DIR" ]; then
   exit 1
 fi
 UPSTREAM_ROOT="$(dirname "$(dirname "$CARTS_DIR")")"
+SYSTEM_FONTS="$UPSTREAM_ROOT/System/fonts"
+[ -d "$SYSTEM_FONTS" ] || {
+  echo "upstream archive has no System/fonts directory; interface would fall back to label.ttf without CJK" >&2
+  exit 1
+}
+find "$SYSTEM_FONTS" -maxdepth 1 -type f \\( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \\) -print -quit | grep -q . || {
+  echo "upstream System/fonts has no usable TTF/OTF/TTC file" >&2
+  exit 1
+}
+[ -s "$UPSTREAM_ROOT/System/slotnet.sh" ] || {
+  echo "upstream archive has no System/slotnet.sh" >&2
+  exit 1
+}
+sh -n "$UPSTREAM_ROOT/System/slotnet.sh"
 [ -d "$UPSTREAM_ROOT/Music/Fonts" ] || {
   echo "upstream archive is missing Music/Fonts" >&2
   exit 1
@@ -146,6 +160,13 @@ done
 # supplied core libraries and all user files out of this import path.
 mkdir -p "$STAGE/System"
 cp -a "$CARTS_DIR" "$STAGE/System/Carts"
+cp -a "$SYSTEM_FONTS" "$STAGE/System/fonts"
+cp -p "$UPSTREAM_ROOT/System/slotnet.sh" "$STAGE/System/slotnet.sh"
+chmod 0755 "$STAGE/System/slotnet.sh"
+if [ -s "$UPSTREAM_ROOT/System/wifi.conf.example" ]; then
+  cp -p "$UPSTREAM_ROOT/System/wifi.conf.example" "$STAGE/System/"
+fi
+sh -n "$STAGE/System/slotnet.sh"
 cp -a "$UPSTREAM_ROOT/Music" "$STAGE/"
 cp -a "$UPSTREAM_ROOT/Overlay" "$STAGE/"
 cp -a "$UPSTREAM_ROOT/Bootlogos" "$STAGE/"
@@ -158,7 +179,7 @@ UI asset source: RetroGame66/LUCKLUCK-SLOT
 Release: $UPSTREAM_TAG
 Package: $ASSET_NAME
 SHA-256: $ASSET_SHA256
-Imported paths: System/Carts, Music, Overlay, Bootlogos
+Imported paths: System/Carts, System/fonts, upstream System/slotnet.sh, optional System/wifi.conf.example, Music, Overlay, Bootlogos
 Missing legacy machine marks:$MISSING_MACHINE_MARKS
 Legacy mark supplement: RetroGame66/LUCKLUCK-SLOT $LEGACY_TAG (only six type_*.png files, sha256 $LEGACY_SHA256)
 Not imported: System/slot, libretro cores, saves, ROMs or user content
@@ -168,6 +189,8 @@ find "$STAGE/System/Carts" -maxdepth 2 -type f -printf '%P\\n' | sort > "$STAGE/
 echo "== upstream UI asset staging verified =="
 printf 'System/Carts PNGs: '
 find "$STAGE/System/Carts" -type f -iname '*.png' | wc -l
+printf 'System font files: '
+find "$STAGE/System/fonts" -maxdepth 1 -type f \\( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \\) | wc -l
 printf 'Music files: '
 find "$STAGE/Music" -type f | wc -l
 printf 'Overlay files: '
