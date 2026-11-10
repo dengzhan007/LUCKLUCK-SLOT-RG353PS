@@ -46,6 +46,7 @@ IMAGE="${SLOT_BUILD_IMAGE:-slot-66-rg353ps-build:rust-1.96}"
 
 mkdir -p "$OUT" "$WORK/cargo-registry" "$WORK/cargo-git" "$WORK/cargo-target"
 sh "$HERE/stage-upstream-assets.sh" "$WORK" "$ASSET_STAGE"
+sh "$HERE/stage-core-pack.sh" "$WORK" "$ASSET_STAGE/CorePack"
 rm -rf "$SRC_HOST"
 mkdir -p "$SRC_HOST"
 git -C "$REPO_ROOT" archive --format=tar HEAD | tar -xf - -C "$SRC_HOST"
@@ -162,6 +163,13 @@ docker run --rm --network host --platform linux/arm64 \
       cp -a /upstream-assets/System/boot_opening.slotvid "$PKG/System/"
     fi
     cp /upstream-assets/UPSTREAM-ASSET-SOURCE.txt "$PKG/"
+    # Add the pinned AArch64/musl core pack to the same release tree. This is a
+    # byte-for-byte reuse of the separately validated pack, not a core rebuild.
+    cp -a /upstream-assets/CorePack/System/. "$PKG/System/"
+    cp /upstream-assets/CorePack/CORE-PACK-SOURCE.txt "$PKG/"
+    for core in mgba gpsp fceumm supafaust fbneo genesis_plus_gx pcsx_rearmed pce_fast; do
+      test -s "$PKG/System/${core}_libretro.so"
+    done
 
     # Catch an incomplete distribution package before it reaches the SD card.
     for machine in GBA GB GBC SFC FC NEOGEO ARCADE MD PS1 PCE; do
