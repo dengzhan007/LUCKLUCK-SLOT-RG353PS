@@ -11060,6 +11060,7 @@ impl App {
                 }
             }
         }
+    }
 
     fn wake(&mut self) {
         let restore_frontend_backlight = self.frontend_owns_backlight();
