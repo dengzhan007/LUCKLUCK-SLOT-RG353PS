@@ -12,9 +12,10 @@
 > with the native 640×480 compositor/layout retained. For RG353PS, the H700-specific EGL
 > framebuffer surface is replaced at package time with BaseOS SDL2/KMSDRM + GLES2 on Panfrost.
 > The BaseOS launcher/manifest and USB ownership remain with BaseOS; the existing card-side
-> MTP helper hook is retained. Test CI builds Simplified Chinese only; tagged releases build
-> separate Chinese and English binaries. Libretro cores are a separate reusable package
-> ([core pack v1.0.0](https://github.com/dengzhan007/LUCKLUCK-SLOT-RG353PS/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)).
+> MTP helper hook is retained. Test CI builds Simplified Chinese only; tagged releases build separate Chinese and English
+> RG353PS packages. Each full release package includes the pinned AArch64/musl emulator cores
+> from [core pack v1.0.0](https://github.com/dengzhan007/LUCKLUCK-SLOT-RG353PS/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0),
+> their runtime libraries, and license/source materials.
 >
 > **Branch `66-mods-640` — the 640×480 edition.** The `66-mods` branch is the 720×480 tree
 > (RG SP, RG34XX, RG34XXSP and the rest of the 720 group); this branch is the same frontend laid
@@ -141,25 +142,16 @@ GB and GBC run on the frontend's built-in Game Boy core, which is not user-switc
 
 ## Downloads
 
-Packages live on the [Releases page](https://github.com/RetroGame66/LUCKLUCK-SLOT/releases). Each
-release carries **four** frontend zips — pick the panel first, then the language:
+Packages are published on the [Releases page](https://github.com/dengzhan007/LUCKLUCK-SLOT-RG353PS/releases). This repository targets the RG353PS native **640×480** panel and publishes two complete packages:
 
-| Package | Panel |
+| Package | Language |
 |---|---|
-| `66slot-frontend-System-720480-V*.zip` | **720×480** — RG SP, RG34XX, RG34XXSP and the rest of the 720 group · Chinese UI |
-| `66slot-frontend-System-720480-V*-en.zip` | the same tree · English UI |
-| `66slot-frontend-System-640480-V*.zip` | **640×480** — RG35XXSP and the 640 group · Chinese UI |
-| `66slot-frontend-System-640480-V*-en.zip` | the same tree · English UI |
+| `66slot-frontend-System-640480-V*-RG353PS.zip` | Simplified Chinese |
+| `66slot-frontend-System-640480-V*-RG353PS-en.zip` | English |
 
-The 640 group renders at 640×480; everything else is 720×480. The two builds are not one binary
-behind a flag — row geometry, the plate, the bezel aperture and the desktop art are laid out per
-panel, and the 640 tree carries no MTP responder.
+Each package contains the frontend, BaseOS adapter files, UI assets, all eight external AArch64/musl libretro cores, required runtime libraries, and the associated licence/source materials. GB and GBC use the frontend's built-in cores.
 
-- `slot-companion-toolbox-*-win64.zip` — the Windows toolbox (§ below). Not part of the frontend.
-- `SHA256SUMS.txt` — check the zip against it before writing a card.
-
-A release is only cut after the build has been through a device: the packages are the tested
-binary, not a nightly.
+`SHA256SUMS.txt` contains checksums for both complete packages. Back up saves and any customised core or asset files before merging a release onto an existing card. The release notes state the exact validation scope; CI/loader checks do not imply that every core has completed gameplay testing on hardware.
 
 ## Controls
 
