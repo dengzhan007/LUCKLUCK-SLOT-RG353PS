@@ -53,7 +53,7 @@ SYSTEM_FONTS="$UPSTREAM_ROOT/System/fonts"
   echo "upstream archive has no System/fonts directory; interface would fall back to label.ttf without CJK" >&2
   exit 1
 }
-find "$SYSTEM_FONTS" -maxdepth 1 -type f \\( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \\) -print -quit | grep -q . || {
+find "$SYSTEM_FONTS" -maxdepth 1 -type f \( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \) -print -quit | grep -q . || {
   echo "upstream System/fonts has no usable TTF/OTF/TTC file" >&2
   exit 1
 }
@@ -190,7 +190,7 @@ echo "== upstream UI asset staging verified =="
 printf 'System/Carts PNGs: '
 find "$STAGE/System/Carts" -type f -iname '*.png' | wc -l
 printf 'System font files: '
-find "$STAGE/System/fonts" -maxdepth 1 -type f \\( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \\) | wc -l
+find "$STAGE/System/fonts" -maxdepth 1 -type f \( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \) | wc -l
 printf 'Music files: '
 find "$STAGE/Music" -type f | wc -l
 printf 'Overlay files: '
