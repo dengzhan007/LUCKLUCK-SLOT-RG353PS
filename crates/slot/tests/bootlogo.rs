@@ -1,16 +1,13 @@
-//! 开机画面那一行的后端：卡上 `Bootlogos/` 的图，和"能不能写进分区"这件事。
-//!
-//! **这一份不碰分区**（宿主机上没有 `boot-resource`）：能在这里跑的是"卡上有什么、
-//! 记了哪一张、什么样的 bmp 才算数"，以及**没写成的时候什么都没被改动** ——
-//! 后者恰恰是这一屏唯一有风险的地方，所以它是这里的重点。
-//! 真机上挂分区、覆盖、重启看效果，是设备上的活，不是测试能替的。
+//! RG353PS BaseOS boot-logo contract: 640x480 BMP validation, durable
+//! selection state, and the generated-default state when no custom image is selected.
 
 mod common;
 
 use slot::bootlogo::{self, BYTES, Failure};
 use std::path::Path;
 
-/// 一张头合法的 bmp。**只造头**：像素全是 0，够判宽高、位深、压缩方式。
+/// A complete BMP3 pixel array. Pixels are zeroed; tests exercise the headers
+/// and dimensions rather than the artwork.
 fn bmp(width: i32, height: i32, bpp: u16) -> Vec<u8> {
     let mut b = vec![0u8; BYTES];
     b[0..2].copy_from_slice(b"BM");
@@ -31,108 +28,116 @@ fn boot_dir(root: &Path) -> std::path::PathBuf {
     dir
 }
 
-/// 这两个用例会**真的去写分区**，所以只在没有 boot-resource 的机器上跑（也就是宿主机）。
-/// 在设备上一路跑过去，等于把测试用的假图写进机器 —— 那是刷砖的走法，不是测试的走法。
-fn on_a_device() -> bool {
-    std::path::Path::new(bootlogo::PARTITION).exists()
+fn baseos_boot_is_mounted() -> bool {
+    std::fs::read_to_string("/proc/mounts")
+        .map(|text| {
+            text.lines()
+                .any(|line| line.split_whitespace().nth(1) == Some(bootlogo::DEFAULT_MOUNT))
+        })
+        .unwrap_or(false)
 }
 
-/// 目录是用户的，里面会有别的东西，也会有 Mac 拷过来的影子文件。
 #[test]
-fn only_bmps_are_listed() {
+fn only_bmps_are_listed_in_stable_order() {
     let d = common::tmp_root_with_carts(&["Emerald"]);
     let dir = boot_dir(d.path());
     std::fs::write(dir.join("notes.txt"), b"hello").unwrap();
     std::fs::write(dir.join("cover.png"), b"not a bmp").unwrap();
     std::fs::write(dir.join("._psyduck.bmp"), b"sidecar").unwrap();
-    assert!(bootlogo::list(d.path()).is_empty(), "a non bmp was listed");
+    assert!(bootlogo::list(d.path()).is_empty());
 
-    std::fs::write(dir.join("b.bmp"), bmp(720, 480, 24)).unwrap();
-    std::fs::write(dir.join("a.BMP"), bmp(720, 480, 24)).unwrap();
+    std::fs::write(dir.join("b.bmp"), bmp(640, 480, 24)).unwrap();
+    std::fs::write(dir.join("a.BMP"), bmp(640, 480, 24)).unwrap();
     let names: Vec<String> = bootlogo::list(d.path())
         .iter()
         .map(|e| e.name.clone())
         .collect();
-    // 排序按名字，不是按目录给回来的顺序 —— 同一张卡每次开机必须是同一列。
-    assert_eq!(names, ["a.BMP", "b.bmp"], "got {names:?}");
+    assert_eq!(names, ["a.BMP", "b.bmp"]);
 }
 
-/// 一列全是 bmp，后缀只是噪音。
 #[test]
 fn the_label_drops_the_extension() {
     let d = common::tmp_root_with_carts(&["Emerald"]);
     let dir = boot_dir(d.path());
-    std::fs::write(dir.join("sunset.bmp"), bmp(720, 480, 24)).unwrap();
+    std::fs::write(dir.join("sunset.bmp"), bmp(640, 480, 24)).unwrap();
     let logos = bootlogo::list(d.path());
     assert_eq!(logos[0].label(), "sunset");
-    // 名字就是写进 `System/bootlogo.txt` 的那个（带扩展名），别把显示用的名字存进去。
     assert_eq!(logos[0].name, "sunset.bmp");
 }
 
-/// 卡上记的是**名字**：往目录里加一张图，编号就会错位，名字不会。
 #[test]
-fn the_card_remembers_which_picture_is_up() {
+fn no_selection_means_generated_baseos_default() {
     let d = common::tmp_root_with_carts(&["Emerald"]);
     let dir = boot_dir(d.path());
     for n in ["a.bmp", "b.bmp", "c.bmp"] {
-        std::fs::write(dir.join(n), bmp(720, 480, 24)).unwrap();
+        std::fs::write(dir.join(n), bmp(640, 480, 24)).unwrap();
     }
     let logos = bootlogo::list(d.path());
-    assert!(bootlogo::current(d.path()).is_none(), "a blank card claimed a choice");
+    assert!(bootlogo::current(d.path()).is_none());
+    assert_eq!(bootlogo::selected(d.path(), &logos), None);
 
-    bootlogo::save(d.path(), &logos[2].name);
+    bootlogo::save(d.path(), &logos[2].name).unwrap();
     assert_eq!(bootlogo::current(d.path()).as_deref(), Some("c.bmp"));
     assert_eq!(bootlogo::selected(d.path(), &logos), Some(2));
 
-    // 记着的那张被用户删了 ⇒ 不是"落在第一张上"，而是"没有选中项"，由调用方去回落。
-    bootlogo::save(d.path(), "gone.bmp");
+    bootlogo::save(d.path(), "gone.bmp").unwrap();
     assert_eq!(bootlogo::selected(d.path(), &logos), None);
+
+    bootlogo::reset(d.path()).unwrap();
+    assert!(bootlogo::current(d.path()).is_none());
+    assert!(!d.path().join(bootlogo::STATE).exists());
 }
 
-/// 开机图必须整幅 720x480 24 位。看的是字节，不是扩展名 —— uboot 读的也是字节。
 #[test]
-fn a_picture_that_is_not_the_whole_screen_is_refused() {
-    assert!(bootlogo::is_boot_picture(&bmp(720, 480, 24)));
-    assert!(!bootlogo::is_boot_picture(&bmp(720, 481, 24)), "a row too tall");
-    assert!(!bootlogo::is_boot_picture(&bmp(721, 480, 24)), "a column too wide");
-    assert!(!bootlogo::is_boot_picture(&bmp(720, 480, 32)), "32 bit");
-    assert!(!bootlogo::is_boot_picture(&bmp(720, 480, 8)), "palettised");
+fn only_complete_rg353ps_bmp3_images_are_accepted() {
+    assert_eq!(BYTES, 921_654);
+    assert!(bootlogo::is_boot_picture(&bmp(640, 480, 24)));
+    assert!(bootlogo::is_boot_picture(&bmp(640, -480, 24)), "top-down BMP");
+    assert!(!bootlogo::is_boot_picture(&bmp(720, 480, 24)), "old 720-wide format");
+    assert!(!bootlogo::is_boot_picture(&bmp(640, 481, 24)), "a row too tall");
+    assert!(!bootlogo::is_boot_picture(&bmp(641, 480, 24)), "a column too wide");
+    assert!(!bootlogo::is_boot_picture(&bmp(640, 480, 32)), "32 bit");
+    assert!(!bootlogo::is_boot_picture(&bmp(640, 480, 8)), "palettised");
     assert!(!bootlogo::is_boot_picture(b"BM"), "a stub");
     assert!(!bootlogo::is_boot_picture(b""), "nothing at all");
+
+    let mut compressed = bmp(640, 480, 24);
+    compressed[30..34].copy_from_slice(&1u32.to_le_bytes());
+    assert!(!bootlogo::is_boot_picture(&compressed), "compressed BMP");
+    let mut invalid_header = bmp(640, 480, 24);
+    invalid_header[14..18].copy_from_slice(&124u32.to_le_bytes());
+    assert!(!bootlogo::is_boot_picture(&invalid_header), "pixel data overlaps DIB header");
+    let mut truncated = bmp(640, 480, 24);
+    truncated.truncate(BYTES - 1);
+    assert!(!bootlogo::is_boot_picture(&truncated), "truncated pixel array");
 }
 
-/// **没写成的时候，卡上不能多出任何东西。** 这一屏唯一会动到 slot 以外的地方就是
-/// 写分区，而"换图失败却把备份留下来了"会让人以为换成了。
 #[test]
-fn a_failure_leaves_the_card_alone() {
+fn a_failed_apply_does_not_commit_a_selection_or_backup() {
     let d = common::tmp_root_with_carts(&["Emerald"]);
     let dir = boot_dir(d.path());
-    std::fs::write(dir.join("a.bmp"), bmp(720, 480, 24)).unwrap();
+    std::fs::write(dir.join("a.bmp"), bmp(640, 480, 24)).unwrap();
     let logos = bootlogo::list(d.path());
-    if on_a_device() {
+
+    // Do not let a host test write to a real device. On hardware the integration
+    // test is skipped; the unit suite only exercises validation/state helpers.
+    if baseos_boot_is_mounted() {
         return;
     }
-
-    // 宿主机上没有 boot-resource 分区：报"没有这块分区"，而且一张图都没动。
-    let why = bootlogo::apply(d.path(), &logos[0]).unwrap_err();
-    assert_eq!(why, Failure::NoPartition, "host has no boot resource: got {why:?}");
-    assert!(
-        !d.path().join(bootlogo::BACKUP).exists(),
-        "a failed write left a backup behind"
-    );
-    assert!(bootlogo::current(d.path()).is_none(), "a failed write was recorded");
+    assert_eq!(bootlogo::apply(d.path(), &logos[0]), Err(Failure::Mount));
+    assert!(!d.path().join(bootlogo::BACKUP).exists());
+    assert!(bootlogo::current(d.path()).is_none());
 }
 
-/// 不是开机图的 bmp 直接在门口就拦掉了 —— 连分区都不去挂。
 #[test]
-fn a_picture_that_is_not_a_boot_picture_is_never_written() {
+fn an_invalid_picture_is_rejected_before_boot_volume_access() {
     let d = common::tmp_root_with_carts(&["Emerald"]);
     let dir = boot_dir(d.path());
     std::fs::write(dir.join("small.bmp"), bmp(320, 240, 24)).unwrap();
     let logos = bootlogo::list(d.path());
-    // 这个不用躲：规格不对的图在挂分区之前就被拦下了，压根走不到写那一步。
     assert_eq!(
         bootlogo::apply(d.path(), &logos[0]),
         Err(Failure::NotAPicture)
     );
+    assert!(bootlogo::current(d.path()).is_none());
 }

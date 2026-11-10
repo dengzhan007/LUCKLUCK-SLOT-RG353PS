@@ -2226,14 +2226,12 @@ pub struct App {
     /// 换一张卡、往目录里丢一张图，都是开机那一次扫描才认得的东西，
     /// 存进持久状态只会让两张卡互相说错对方的事。
     bootlogos: Vec<crate::bootlogo::Entry>,
-    /// **机器现在用的第几张** —— 也就是这一行"改完"之后停的那一张。卡上记的名字已经不在
-    /// 目录里 ⇒ 0（第一张）。
+    /// **机器现在用的选择索引**：0 is the generated BaseOS wordmark; custom BMPs are 1..=N.
+    /// If the persisted filename no longer exists, the effective selection falls back to 0.
     boot_index: usize,
-    /// ★ **2026-10-20（六六的走法）：这一行`浏览`到第几张 —— 还没写进机器的那一张。**
-    /// `←`/`→` 只动它、**不动 `boot_index`、不碰分区**；`A` 才把它落到机器上（成了两个
-    /// 就相等），`B` 把它丢回 `boot_index`。
-    /// 两个字段而不是一个：写分区是**会失败的**，失败时这一行必须退回"机器真正在用的那张"，
-    /// 一个字段就没得退 —— 屏上显示的是 `boot_pick`，机器里生效的是 `boot_index`。
+    /// The value currently browsed in the settings row. Index 0 is the generated BaseOS
+    /// wordmark; index 1 and later are the user's BMP candidates. A successful apply/reset
+    /// moves both indices together; a failure restores the effective index.
     boot_pick: usize,
     /// How far up the game layer's own screen is. Not a phase: it outlives the insert, since
     /// the cart is home and the chrome is still on screen while the picture arrives.
@@ -2681,11 +2679,14 @@ impl App {
         // is the only thing that ever writes the file.
         app.wifi_conf = slot_store::WifiConf::read(root);
         app.state = read_slot_state(root);
-        // The boot pictures, and which one is up. Read here rather than carried in the
-        // persisted state: the contents of `Bootlogos/` are a fact about the card in the
-        // slot, not a setting the machine was left at.
+        // Custom boot pictures are card content; the active choice is the shared BaseOS
+        // selection record. Index 0 remains BaseOS's generated default, even if the card
+        // contains no custom BMPs.
         app.bootlogos = crate::bootlogo::list(root);
-        app.boot_index = crate::bootlogo::selected(root, &app.bootlogos).unwrap_or(0);
+        // Index 0 is the generated BaseOS wordmark. Candidate BMPs occupy 1..=N.
+        // Missing selection is therefore explicit, never confused with the first image.
+        app.boot_index = crate::bootlogo::selected(root, &app.bootlogos)
+            .map_or(0, |index| index + 1);
         // ★ **这一行开机时就停在"机器在用的那一张"上**（2026-10-20）：浏览是 `boot_pick`
         // 的事，一个刚开的屏没有"浏览过但没应用"这种状态 —— 那只会让第一眼看到的和
         // 机器里生效的不是同一张。
@@ -4401,13 +4402,10 @@ impl App {
             // one word and this has to say 0; the old two-word "refresh / refreshed" receipt is
             // gone with `library_note`.
             slot_ui::settings::Row::Refresh => 0,
-            // ★ **这一行显示的是"浏览到"的那一张，不是机器在用的那一张**（2026-10-20）。
-            // `←`/`→` 只挪 `boot_pick`，所以按了方向键但没按 `A` 时这两者可以不一样 ——
-            // 屏上就该显示"你正指着的那张"，而机器里生效的仍是 `boot_index`。
-            // 一张都没有时只有那一个词可指（`SETTINGS_BOOT_NONE`），所以是 0；夹一下是
-            // 因为目录里的图可以在 slot 跑着的时候被拔卡删掉，而索引是开机那一次算的。
-            slot_ui::settings::Row::Boot if self.bootlogos.is_empty() => 0,
-            slot_ui::settings::Row::Boot => self.boot_pick.min(self.bootlogos.len() - 1),
+            // Index 0 is BaseOS's generated wordmark; custom BMPs begin at index 1.
+            // Clamp against the complete list so removing a candidate while Slot is open
+            // cannot make the settings row point outside it.
+            slot_ui::settings::Row::Boot => self.boot_pick.min(self.bootlogos.len()),
             // ★ 2026-10-21：Wi-Fi 行两个词 —— 「未配置」(0) / 「已配置」(1)。读的是开机那次
             //   记下的卡上事实，配置浮层保存/删除时同步更新，所以屏上不会说谎。
             slot_ui::settings::Row::Wifi => usize::from(self.wifi_conf.is_some()),
@@ -4518,17 +4516,14 @@ impl App {
             // that its *second* value exists — but that value is the receipt for a press, not a
             // state to be on, so walking onto it with `→` would be walking onto a past tense.
             slot_ui::settings::Row::Refresh => return,
-            // ★ **2026-10-28（六六定的走法）：`A` 一步一换，换到就写。** 方向键全给了光标，
-            //   所以这一行和快进/回溯一样退化成了普通列表 —— `A` 挪到下一张并把那张写进机器
-            //   （`apply_boot`）。写的仍是机器通电那一刻要读的那张图（boot-resource 分区，
-            //   `slot::bootlogo`），所以成了也说"下次开机生效"；没写成功 `apply_boot` 会把
-            //   `boot_pick` 拨回机器在用的那张，屏上不会说谎。
+            // A cycles between BaseOS's generated wordmark and the card's custom BMPs.
+            // Selecting a custom BMP writes it through BaseOS's mounted BOOT volume; selecting
+            // the generated default clears the persistent custom-selection record.
+            // BaseOS default is index 0; custom BMPs follow it. A advances
+            // through the complete list and commits immediately.
             slot_ui::settings::Row::Boot => {
-                if self.bootlogos.is_empty() {
-                    return;
-                }
                 let at = self.settings_value(row);
-                let to = Self::step_index(at, self.bootlogos.len(), right);
+                let to = Self::step_index(at, self.bootlogos.len() + 1, right);
                 if to == at {
                     return;
                 }
@@ -4542,44 +4537,34 @@ impl App {
         self.persist();
     }
 
-    /// ★ **`A` on the boot row: write the browsed picture into the machine** (2026-10-20).
-    ///
-    /// Browsing is free and this is the one press that is not. It is the only place on this
-    /// screen that reaches outside slot — `slot::bootlogo` mounts the boot-resource partition
-    /// and overwrites `BOOTLOGO.BMP`, a file **u-boot reads**, which is why nothing appears on
-    /// screen until the next power-on and why the toast says so.
-    ///
-    /// **Only a successful write moves `boot_index`.** A failure puts the row back on the
-    /// picture the machine is actually using: the row would otherwise be claiming a picture
-    /// that is not in there, and the next boot would prove it.
+    /// Apply the selected boot artwork through the BaseOS contract. Index 0
+    /// clears the custom selection and restores the generated BaseOS wordmark;
+    /// indices 1..=N install the corresponding 640x480 BMP for the next boot.
     fn apply_boot(&mut self) {
-        if self.bootlogos.is_empty() {
-            return;
-        }
         let at = self.settings_value(slot_ui::settings::Row::Boot);
-        // Nothing browsed to: already the picture in the machine, so there is nothing to write
-        // and nothing to say.
         if at == self.boot_index {
             return;
         }
         let Some(root) = self.root.clone() else {
             return;
         };
-        let Some(entry) = self.bootlogos.get(at).cloned() else {
-            return;
+
+        let result = if at == 0 {
+            crate::bootlogo::reset(&root)
+        } else if let Some(entry) = self.bootlogos.get(at - 1) {
+            crate::bootlogo::apply(&root, entry)
+        } else {
+            Err(crate::bootlogo::Failure::NotAPicture)
         };
-        match crate::bootlogo::apply(&root, &entry) {
+
+        match result {
             Ok(()) => {
                 self.boot_index = at;
-                crate::bootlogo::save(&root, &entry.name);
+                self.boot_pick = at;
                 self.toast_now(slot_ui::Toast::BootSet);
             }
             Err(why) => {
-                // 说在卡片上的日志里，不在屏上：一台没有终端的机器能报的只有
-                // "没换成"，具体是哪一步只有把卡插到电脑上才看得见。
                 eprintln!("slot: bootlogo: {why:?}");
-                // **退回机器在用的那一张**：这一行显示的就是"当前生效的那张"，
-                // 没写成功就不该显示成新的 —— 这一行没有"写了一半"这种状态。
                 self.boot_pick = self.boot_index;
                 self.toast_now(slot_ui::Toast::BootFailed);
             }

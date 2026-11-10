@@ -331,10 +331,11 @@ pub fn values(
         //   值位留空，`face` 只画名字（一个空字符串就是"没有值"）。原先的两个词（刷新 /
         //   已刷新）是给瞬时回执用的，方向键全给光标后 `A` 就是动作，回执没了意义。
         Row::Refresh => vec![String::new()],
-        // ★ **卡上有什么就列什么**（2026-10-20）。一张都没有的时候这一列**不能是空的** ——
-        // 空列表没有位置可站，`settings_value` 就没有值可指 —— 所以给一个词，说的是"卡上没有"。
-        Row::Boot if logos.is_empty() => vec![crate::lang::SETTINGS_BOOT_NONE.to_string()],
-        Row::Boot => logos.to_vec(),
+        // The generated BaseOS wordmark is always available as index 0.
+        // Custom BMP choices follow it, even when the card contains no images.
+        Row::Boot => std::iter::once(crate::lang::SETTINGS_BOOT_DEFAULT.to_string())
+            .chain(logos.iter().cloned())
+            .collect(),
         // ★ 2026-10-21：两个词 —— 「未配置」/「已配置」，判据是卡上有没有 wifi.conf。
         //   SSID 本身不在这里：这一行是定宽盘子，名字在浮层里。
         Row::Wifi => [crate::lang::SETTINGS_WIFI_UNSET, crate::lang::SETTINGS_WIFI_SET]

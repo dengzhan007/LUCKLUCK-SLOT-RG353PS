@@ -48,13 +48,14 @@ pub fn has_user_font() -> bool {
     USER_FONT.get().is_some()
 }
 
-pub fn set_font(bytes: Vec<u8>) {
+pub fn set_font(bytes: Vec<u8>) -> bool {
     // Leaked on purpose. `Font::from_bytes` borrows the bytes for as long as the font lives,
     // and the font lives as long as the process; the alternative is a self-referential struct
     // for a single allocation that would never be freed either way.
     let data: &'static [u8] = Box::leak(bytes.into_boxed_slice());
-    if let Ok(font) = Font::from_bytes(data, FontSettings::default()) {
-        let _ = USER_FONT.set(font);
+    match Font::from_bytes(data, FontSettings::default()) {
+        Ok(font) => USER_FONT.set(font).is_ok(),
+        Err(_) => false,
     }
 }
 
@@ -137,21 +138,20 @@ static LATIN_FONT: OnceLock<Font> = OnceLock::new();
 /// whichever is absent falls back to the interface face. Two files rather than a folder scan
 /// because the panel asks for two *specific* faces — a folder that happened to hold a third font
 /// must not change what the deck looks like.
-pub fn set_panel_fonts(cjk: Option<Vec<u8>>, latin: Option<Vec<u8>>) {
+pub fn set_panel_fonts(cjk: Option<Vec<u8>>, latin: Option<Vec<u8>>) -> (bool, bool) {
     // Leaked on purpose, for the same reason `set_font` leaks: the font borrows the bytes and
     // both live as long as the process.
-    if let Some(bytes) = cjk {
+    let cjk_ok = cjk.is_some_and(|bytes| {
         let data: &'static [u8] = Box::leak(bytes.into_boxed_slice());
-        if let Ok(font) = Font::from_bytes(data, FontSettings::default()) {
-            let _ = CJK_FONT.set(font);
-        }
-    }
-    if let Some(bytes) = latin {
+        Font::from_bytes(data, FontSettings::default())
+            .is_ok_and(|font| CJK_FONT.set(font).is_ok())
+    });
+    let latin_ok = latin.is_some_and(|bytes| {
         let data: &'static [u8] = Box::leak(bytes.into_boxed_slice());
-        if let Ok(font) = Font::from_bytes(data, FontSettings::default()) {
-            let _ = LATIN_FONT.set(font);
-        }
-    }
+        Font::from_bytes(data, FontSettings::default())
+            .is_ok_and(|font| LATIN_FONT.set(font).is_ok())
+    });
+    (cjk_ok, latin_ok)
 }
 
 /// The panel's Chinese face, or the interface's if the card did not supply one.
@@ -194,12 +194,10 @@ pub struct Plan {
 
 /// Whether `font` carries a *glyph slot* for `ch`.
 ///
-/// ⚠️ **Deliberately not [`has_glyph`]**, which asks whether the glyph rasterises to something.
-/// A **space** has no ink and rasterises to nothing, so that test says "no glyph" for every
-/// space — and under [`plan_face`] that sent every space in a Latin line to the *Chinese* face,
-/// which then decided the line's ascent (14 instead of 8) and pushed the whole row several
-/// pixels down. The question a face choice needs answered is "can this face set this character",
-/// and that is the glyph index, not the ink.
+/// Choose a face by its character map, not by rasterising at an arbitrary 1 px and
+/// inferring presence from the resulting bitmap. A glyph may exist even when a tiny
+/// rasterisation has no ink. This is also the same test used by `missing_in`, so the
+/// diagnostic and drawing paths agree about which characters a face supports.
 fn carries(font: &Font, ch: char) -> bool {
     font.lookup_glyph_index(ch) != 0
 }
@@ -387,11 +385,6 @@ pub fn plan_coverage(dst_w: u32, dst_h: u32, layout: &Layout, plan: &Plan) -> Ve
     out
 }
 
-/// Whether `font` actually carries `ch`, rather than only its `.notdef` box.
-fn has_glyph(font: &Font, ch: char) -> bool {
-    font.rasterize(ch, 1.0).0.width > 0
-}
-
 /// **Which face a glyph is drawn with — and the size decides.**
 ///
 /// The panel has two pixel faces: the body one (design size 12px, from the card) and the small
@@ -404,7 +397,7 @@ fn has_glyph(font: &Font, ch: char) -> bool {
 /// ideographs it does carry from being a trap: a Chinese label at 10px renders from the 12px
 /// face rather than vanishing.
 fn face_for(ch: char, px: f32) -> &'static Font {
-    if px <= SMALL_PX_MAX && has_glyph(small_font(), ch) {
+    if px <= SMALL_PX_MAX && carries(small_font(), ch) {
         small_font()
     } else {
         font_for(ch)
@@ -450,11 +443,9 @@ pub fn missing_in(text: &str) -> Vec<char> {
         if ch == '\n' || ch.is_whitespace() {
             continue;
         }
-        // ★ **`carries`, not `has_glyph`**（2026-10-07）：这里问的是"这张面能不能排这个字"，
-        //   那是**字形槽**（`lookup_glyph_index`），而 `has_glyph` 答的是"它栅格化之后有没有墨"
-        //   —— 后者要**真的栅格化一次**才答得出来。而这个问题是拿**卡上每一个标题 × 每一个字
-        //   × 两张面**来问的，全在第一帧之前：便宜的这一个同时也是意思对的那一个。
-        //   空白在上面已经跳过了，而"空白"正是两者唯一会分歧的字（见 `carries` 的注释）。
+        // ★ **`carries` uses the cmap glyph index**: ask whether the face can set this
+        //   character, not whether a 1 px rasterisation happened to leave any ink. This
+        //   check runs across every title before the first frame and must agree with drawing.
         let user_has = USER_FONT.get().is_some_and(|f| carries(f, ch));
         if !user_has && !carries(embedded_font(), ch) && !out.contains(&ch) {
             out.push(ch);
@@ -468,7 +459,9 @@ pub fn missing_in(text: &str) -> Vec<char> {
 /// Latin UI — codes and labels — that the embedded face still covers.
 fn font_for(ch: char) -> &'static Font {
     if let Some(user) = USER_FONT.get() {
-        if has_glyph(user, ch) {
+        // Keep selection consistent with missing_in(): ask whether the font's cmap
+        // contains a glyph slot, not whether it happens to rasterise at 1 px.
+        if carries(user, ch) {
             return user;
         }
     }

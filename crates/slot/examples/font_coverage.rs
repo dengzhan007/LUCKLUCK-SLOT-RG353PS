@@ -17,7 +17,7 @@
 //! 跑法（**从工作区根**）：
 //!
 //! ```text
-//! cargo run --release --manifest-path slot-main/Cargo.toml --target-dir slot-main/target-host \
+//! cargo run --release --manifest-path Cargo.toml --target-dir target-host \
 //!   -p slot --example font_coverage -- <字体.ttf>
 //! ```
 
@@ -56,12 +56,15 @@ fn main() {
         return;
     };
     let n = bytes.len();
-    slot_ui::text::set_font(bytes);
+    if !slot_ui::text::set_font(bytes) {
+        println!("  字体解析失败：本次覆盖率测试终止（不会统计内嵌 fallback）");
+        return;
+    }
     let Some(font) = slot_ui::text::label_font() else {
         println!("  没有字体");
         return;
     };
-    println!("  文件 {n} 字节");
+    println!("  文件 {n} 字节（已由 fontdue 成功解析）");
     for (name, lo, hi) in BLOCKS {
         let total = hi - lo + 1;
         let mut have = 0usize;

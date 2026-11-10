@@ -340,12 +340,18 @@ impl Frontend {
                     //   而"屏上没字"与"字没居中"这两种现象，光看画面分不出来 ——
                     //   得先知道到底装上了哪一张。`System/fonts/` 里混着 `.bak` 备份，
                     //   `is_font()` 只认 ttf/otf/ttc，所以**只有真后缀的那个算数**。
-                    eprintln!(
-                        "slot: font: {} ({} bytes)",
-                        path.file_name().map(|n| n.to_string_lossy()).unwrap_or_default(),
-                        bytes.len()
-                    );
-                    slot_ui::text::set_font(bytes);
+                    let file_name = path
+                        .file_name()
+                        .map(|n| n.to_string_lossy())
+                        .unwrap_or_default();
+                    eprintln!("slot: font: {} ({} bytes)", file_name, bytes.len());
+                    if slot_ui::text::set_font(bytes) {
+                        eprintln!("slot: font: {} parsed and installed", file_name);
+                        self.session.boot_note("interface font parse: OK");
+                    } else {
+                        eprintln!("slot: font: {} parse/install failed; using embedded fallback", file_name);
+                        self.session.boot_note("interface font parse: FAILED");
+                    }
                 }
                 Err(e) => eprintln!("slot: font: {} 读不了：{e}", path.display()),
             },
@@ -396,11 +402,16 @@ impl Frontend {
                 }
             );
         }
-        slot_ui::text::set_panel_fonts(cjk, latin);
-        // Its own line, and not part of `font load`: this is now a *deck* cost, not a boot one,
-        // and a number that shows up at boot would be a lie about where the time went.
+        let (cjk_ok, latin_ok) = slot_ui::text::set_panel_fonts(cjk, latin);
+        eprintln!(
+            "slot: panel fonts: Chinese={} Latin={}",
+            if cjk_ok { "parsed" } else { "missing/parse-failed" },
+            if latin_ok { "parsed" } else { "missing/parse-failed" }
+        );
         self.session.boot_note(&format!(
-            "panel font (on demand) {} ms",
+            "panel fonts: Chinese={} Latin={} ({} ms)",
+            if cjk_ok { "OK" } else { "FAILED" },
+            if latin_ok { "OK" } else { "FAILED" },
             at.elapsed().as_millis()
         ));
     }
@@ -423,11 +434,9 @@ impl Frontend {
         // Every title on the card, checked once against both faces: a subset font goes stale
         // the moment a game is added, and a missing glyph fails silently as a blank.
         //
-        // ⚠️ **This is O(carts × chars × 2 faces) and `has_glyph` is not a cmap lookup** —
-        //    it is `font.rasterize(ch, 1.0)`, a real rasterisation. Timed since 2026-10-07
-        //    because it is the one boot cost that scales with the library and has no line of
-        //    its own: on a nine-hundred-cart card it is ~2×10⁴ rasterisations, all before the
-        //    first frame.
+        // This is O(carts × chars × 2 cmap lookups), timed separately because it is
+        // the one pre-frame font check that scales with the library. On a nine-hundred-cart
+        // card it is about 2×10⁴ glyph-index lookups before the first frame.
         let miss_at = Instant::now();
         let mut missing: Vec<char> = Vec::new();
         for cart in self.session.app().carts() {
