@@ -12,8 +12,9 @@
 > 保留原生 640×480 合成画布和整套 640 布局。针对 RG353PS，打包时仅替换设备图形后端：
 > 使用 BaseOS 的 SDL2/KMSDRM + GLES2/Panfrost，不使用 H700 专用 EGL framebuffer 后端。
 > BaseOS 继续负责启动器、manifest 和 USB gadget；卡侧 MTP 辅助脚本启动钩子予以保留。
-> 测试 CI 只构建简体中文版，打正式标签时才分别构建中英文二进制。模拟器核心独立复用，
-> 不随前端重复编译（[核心包 v1.0.0](https://github.com/dengzhan007/LUCKLUCK-SLOT-RG353PS/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)）。
+> 测试 CI 只构建简体中文版，正式标签分别构建中英文 RG353PS 完整包。每个完整包都整合固定版本的
+> AArch64/musl 模拟器核心、运行库和许可证/源码材料；核心来源为
+> [核心包 v1.0.0](https://github.com/dengzhan007/LUCKLUCK-SLOT-RG353PS/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)，不会在前端发布时重新编译。
 >
 > **分支 `66-mods-640` —— 640×480 版。** `66-mods` 是 720×480 那棵树（RG SP、RG34XX、RG34XXSP
 > 与其余 720 组机器）；本分支是同一套前端按 **640×480** 面板排的（RG35XXSP 与 640 组）。
@@ -83,22 +84,16 @@ LUCKLUCK SLOT 把一台 BaseOS 掌机变成一整排卡带。相对上游，它�
 
 ## 下载
 
-发布包在 [Releases 页](https://github.com/RetroGame66/LUCKLUCK-SLOT/releases)。每次发布带**四个**前端包 —— 先挑屏幕，再挑语言：
+发布包在 [Releases 页](https://github.com/dengzhan007/LUCKLUCK-SLOT-RG353PS/releases)。本仓库针对 RG353PS 原生 **640×480** 面板，每次发布两个完整包：
 
-| 包 | 屏幕 |
+| 包 | 语言 |
 |---|---|
-| `66slot-frontend-System-720480-V*.zip` | **720×480** —— RG SP、RG34XX、RG34XXSP 等 720 组 · 中文界面 |
-| `66slot-frontend-System-720480-V*-en.zip` | 同一棵树 · 英文界面 |
-| `66slot-frontend-System-640480-V*.zip` | **640×480** —— RG35XXSP 等 640 组 · 中文界面 |
-| `66slot-frontend-System-640480-V*-en.zip` | 同一棵树 · 英文界面 |
+| `66slot-frontend-System-640480-V*-RG353PS.zip` | 简体中文 |
+| `66slot-frontend-System-640480-V*-RG353PS-en.zip` | 英文界面 |
 
-640 组是 640×480，其余是 720×480。两个构建不是一个二进制加开关 —— 货架排布、面板底板、
-遮罩孔径、桌面图都按各自屏幕排，640 那棵也不带 MTP responder。
+每个包均包含前端、BaseOS 适配文件、UI 资源、八个外置 AArch64/musl libretro 核心、所需运行库及对应许可证/源码材料。GB 和 GBC 使用前端内置核心。
 
-- `slot-companion-toolbox-*-win64.zip` —— Windows 工具箱（见下），**不是**前端的一部分。
-- `SHA256SUMS.txt` —— 写卡之前先核对。
-
-只有经过真机跑过的构建才会发出来：包里的二进制是测过的那一版，不是随手编的夜版。
+`SHA256SUMS.txt` 提供两个完整包的校验值。覆盖已有卡之前，请备份存档以及自定义核心、字体和美术资源。发布说明会注明实际验证范围；CI 和动态加载检查不代表所有核心都已经完成真机游戏测试。
 
 ## 键位一览
 
