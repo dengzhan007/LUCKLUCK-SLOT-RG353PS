@@ -152,7 +152,7 @@ docker run --rm --network host --platform linux/arm64 \
     # replace separately provisioned libretro cores.
     cp -a /upstream-assets/System/Carts "$PKG/System/"
     cp -a /upstream-assets/System/fonts "$PKG/System/"
-    test -n "$(find "$PKG/System/fonts" -maxdepth 1 -type f \\( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \\) -print -quit)"
+    test -n "$(find "$PKG/System/fonts" -maxdepth 1 -type f \( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \) -print -quit)"
     test -s "$PKG/System/slotnet.sh"
     for asset_dir in Music Overlay Bootlogos; do
       test -d "/upstream-assets/$asset_dir"
