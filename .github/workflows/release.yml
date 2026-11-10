@@ -1,152 +1,168 @@
-name: release
+name: RG353PS native 640 frontend release
 
-# A tag cuts the release. Running it by hand builds the same tree and leaves it as an
-# artifact instead, so the pipeline can be exercised without spending a version number.
 on:
   push:
     tags: ['v*']
+    branches: ['release/**']
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: rg353ps-frontend-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
-    name: card tree
-    # Native arm64, so the image below is the build box rather than an emulator. Free on
-    # public repositories, which this is.
+    name: Build complete RG353PS 640x480 frontend (Chinese + English + cores)
     runs-on: ubuntu-24.04-arm
-    # The same image the taskfile reaches for off target, so a released binary is linked
-    # against the same glibc 2.31 as one built at a desk. Being inside it already is what
-    # makes `task dist:device` skip its docker call.
-    container: rust:1-bullseye
-    outputs:
-      zip: ${{ steps.package.outputs.zip }}
-      mgba_sha: ${{ steps.package.outputs.mgba_sha }}
-      gpsp_sha: ${{ steps.package.outputs.gpsp_sha }}
-      core_date: ${{ steps.package.outputs.core_date }}
-      gpsp_head: ${{ steps.package.outputs.gpsp_head }}
-      gpsp_anchor: ${{ steps.package.outputs.gpsp_anchor }}
-      gpsp_method: ${{ steps.package.outputs.gpsp_method }}
+    timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v7
-
-      # The image already carries curl, file and unzip, which the fetch and the arch check
-      # need. zip is the only thing missing.
-      - name: Install zip and Task
-        run: |
-          set -eu
-          apt-get update
-          apt-get install -y --no-install-recommends zip
-          curl -fsSL https://taskfile.dev/install.sh | sh -s -- -b /usr/local/bin
-
-      # Named for the tag, so what comes out of the archive says which version it is rather
-      # than landing seven unlabelled folders wherever it was opened.
-      - name: Build the tree
-        run: task dist:device OUT="slot-${GITHUB_REF_NAME}"
-
-      # Before anything is published, not after. A tree built by the wrong toolchain is a
-      # download that bootloops a device, and it costs one exec to know.
-      - name: Check what is about to ship
-        run: |
-          set -eu
-          out="slot-${GITHUB_REF_NAME}"
-          file "$out/System/slot" | grep -q aarch64
-          file "$out/System/mgba_libretro.so" | grep -q aarch64
-          file "$out/System/gpsp_libretro.so" | grep -q aarch64
-          test -x "$out/System/slot"
-          # GPL-2.0 section 3(a): the release does not ship without gpSP's corresponding
-          # source. `task dist:device` names the file for the commit `core:gpsp` recorded, so
-          # that recording is what says which file to look for. The .meta file travels with
-          # it, same naming, carrying the anchor timestamp and resolution method.
-          gpsp_src_sha="$(cat vendor/gpsp-src.sha)"
-          test -f "$out/System/licenses/gpsp-${gpsp_src_sha}.tar.gz"
-          test -f "$out/System/licenses/gpsp-${gpsp_src_sha}.meta"
-
-      - name: Package
-        id: package
-        run: |
-          set -eu
-          out="slot-${GITHUB_REF_NAME}"
-          zip="$out-h700.zip"
-          zip -qry "$zip" "$out"
-          {
-            echo "zip=$zip"
-            # Recorded rather than pinned: both cores are whatever the buildbot was serving
-            # as latest when this ran, and a release should be able to say which ones those
-            # were. Both are hashed, not only mGBA's — the release ships gpSP's binary too,
-            # and a card with a corrupted or substituted gpSP core deserves the same way to
-            # check it against the announcement as mGBA already had.
-            echo "mgba_sha=$(sha256sum vendor/mgba_libretro.so | cut -d' ' -f1)"
-            echo "gpsp_sha=$(sha256sum vendor/gpsp_libretro.so | cut -d' ' -f1)"
-            echo "core_date=$(date -u +%Y-%m-%d)"
-            # The commit whose source archive actually shipped in this zip (see
-            # licenses/README.md) — read back from what core:gpsp recorded, not re-resolved
-            # here, so this can never name a different commit than the file the "Check what
-            # is about to ship" step just verified is in the tree. gpsp_anchor and
-            # gpsp_method come from the same recording: the binary timestamp the commit was
-            # anchored to, and whether that anchoring used GitHub's API or fell back to
-            # git ls-remote — so the notes below can never claim a precision the fetch
-            # itself didn't get.
-            echo "gpsp_head=$(cat vendor/gpsp-src.sha)"
-            echo "gpsp_anchor=$(grep '^binary_date=' vendor/gpsp-src.meta | cut -d= -f2)"
-            echo "gpsp_method=$(grep '^resolved_via=' vendor/gpsp-src.meta | cut -d= -f2)"
-          } >> "$GITHUB_OUTPUT"
-
-      - uses: actions/upload-artifact@v7
+      - name: Checkout frontend source
+        uses: actions/checkout@v4
         with:
-          name: ${{ steps.package.outputs.zip }}
-          path: ${{ steps.package.outputs.zip }}
+          path: slot
+
+      - name: Checkout BaseOS 1.2.8 adapter
+        uses: actions/checkout@v4
+        with:
+          repository: dengzhan007/BaseOS-RG353PS
+          ref: release/1.2.8
+          path: baseos
+
+      - name: Verify build tools
+        run: |
+          set -eu
+          docker version
+          command -v curl
+          command -v unzip
+          command -v sha256sum
+          command -v file
+
+      - name: Resolve release version
+        id: version
+        run: |
+          set -eu
+          case "$GITHUB_REF" in
+            refs/tags/*) tag="$GITHUB_REF_NAME" ;;
+            refs/heads/release/*) tag="${GITHUB_REF_NAME#release/}" ;;
+            *) tag="v2026.11.09" ;;
+          esac
+          case "$tag" in
+            v2026.11.09) package_tag=V20261109-RG353PS ;;
+            *) echo "unexpected RG353PS release tag: $tag" >&2; exit 1 ;;
+          esac
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "package_tag=$package_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Build Chinese package with pinned emulator cores
+        env:
+          BASEOS_ROOT: ${{ github.workspace }}/baseos
+          BASEOS_REF: release/1.2.8
+          SLOT_REV: ${{ github.sha }}
+          SLOT_BRANCH: ${{ github.ref_name }}
+          SLOT_REPO: ${{ github.repository }}
+          LANGUAGE: zh
+          PACKAGE_TAG: ${{ steps.version.outputs.package_tag }}
+          RG353PS_WORK: ${{ github.workspace }}/work/rg353ps
+        run: |
+          cd slot
+          sh packaging/rg353ps/build.sh
+
+      - name: Build English package with pinned emulator cores
+        env:
+          BASEOS_ROOT: ${{ github.workspace }}/baseos
+          BASEOS_REF: release/1.2.8
+          SLOT_REV: ${{ github.sha }}
+          SLOT_BRANCH: ${{ github.ref_name }}
+          SLOT_REPO: ${{ github.repository }}
+          LANGUAGE: en
+          PACKAGE_TAG: ${{ steps.version.outputs.package_tag }}
+          RG353PS_WORK: ${{ github.workspace }}/work/rg353ps
+        run: |
+          cd slot
+          sh packaging/rg353ps/build.sh
+
+      - name: Name and verify release assets
+        env:
+          PACKAGE_TAG: ${{ steps.version.outputs.package_tag }}
+        run: |
+          set -eu
+          mkdir -p release-assets
+          work="work/rg353ps/frontends"
+          zh="LUCKLUCK-SLOT-RG353PS-640x480-${PACKAGE_TAG}-zh.zip"
+          en="LUCKLUCK-SLOT-RG353PS-640x480-${PACKAGE_TAG}-en.zip"
+          cp "$work/$zh" "release-assets/66slot-frontend-System-640480-V20261109-RG353PS.zip"
+          cp "$work/$en" "release-assets/66slot-frontend-System-640480-V20261109-RG353PS-en.zip"
+          python3 - release-assets <<'PY'
+          import pathlib, sys, zipfile
+          root = pathlib.Path(sys.argv[1])
+          required = [
+              "System/slot",
+              "System/mgba_libretro.so",
+              "System/gpsp_libretro.so",
+              "System/fceumm_libretro.so",
+              "System/supafaust_libretro.so",
+              "System/fbneo_libretro.so",
+              "System/genesis_plus_gx_libretro.so",
+              "System/pcsx_rearmed_libretro.so",
+              "System/pce_fast_libretro.so",
+              "System/lib",
+              "System/licenses",
+              "CORE-PACK-SOURCE.txt",
+          ]
+          for archive in sorted(root.glob("*.zip")):
+              with zipfile.ZipFile(archive) as z:
+                  bad = z.testzip()
+                  if bad:
+                      raise SystemExit(f"{archive}: corrupt member {bad}")
+                  names = set(z.namelist())
+                  missing = [p for p in required if not any(n == p or n.endswith("/" + p) or n.startswith(p + "/") for n in names)]
+                  if missing:
+                      raise SystemExit(f"{archive}: missing required package paths: {missing}")
+                  print(f"verified {archive.name}: {len(names)} members")
+          PY
+          (cd release-assets && sha256sum *.zip > SHA256SUMS.txt)
+          ls -lh release-assets
+
+      - name: Upload complete RG353PS frontend packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: luckluck-slot-rg353ps-v2026.11.09-complete
+          path: release-assets/*
           if-no-files-found: error
+          retention-days: 30
 
   publish:
-    name: release
+    name: Publish GitHub Release
     needs: build
-    # Skipped on a manual run, which leaves the artifact above and nothing else.
-    if: startsWith(github.ref, 'refs/tags/')
-    # Not the arm runner and not a container: this job only moves a file, and gh is already
-    # on the stock image.
+    if: startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/heads/release/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v8
+      - name: Download release packages
+        uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.build.outputs.zip }}
+          name: luckluck-slot-rg353ps-v2026.11.09-complete
+          path: release-assets
 
-      - name: Create the release
+      - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
-          ZIP: ${{ needs.build.outputs.zip }}
-          MGBA_SHA: ${{ needs.build.outputs.mgba_sha }}
-          GPSP_SHA: ${{ needs.build.outputs.gpsp_sha }}
-          CORE_DATE: ${{ needs.build.outputs.core_date }}
-          GPSP_HEAD: ${{ needs.build.outputs.gpsp_head }}
-          GPSP_ANCHOR: ${{ needs.build.outputs.gpsp_anchor }}
-          GPSP_METHOD: ${{ needs.build.outputs.gpsp_method }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           set -eu
-          cat > notes.md <<NOTES
-          Unzip and copy the contents of \`slot-${GITHUB_REF_NAME}/\` onto SD2.
-
-          | | |
-          |---|---|
-          | \`System/slot\` | aarch64, built against glibc 2.31 |
-          | \`System/mgba_libretro.so\` | libretro buildbot nightly, fetched ${CORE_DATE}, sha256 \`${MGBA_SHA}\` |
-          | \`System/gpsp_libretro.so\` | libretro buildbot nightly, fetched ${CORE_DATE}, sha256 \`${GPSP_SHA}\` |
-          | \`System/licenses/gpsp-${GPSP_HEAD}.tar.gz\` | gpSP source, libretro/gpsp \`master\` @ \`${GPSP_HEAD}\` |
-          | \`System/licenses/gpsp-${GPSP_HEAD}.meta\` | anchor \`${GPSP_ANCHOR}\`, resolved via \`${GPSP_METHOD}\` |
-
-          mGBA is MPL-2.0, gpSP is GPL-2.0 — both shipped as unmodified libretro cores, both
-          credited with their license text under \`System/licenses/\`. gpSP's corresponding
-          source ships in this zip too, per GPL-2.0 section 3(a): the buildbot does not publish
-          which commit a nightly was built from, so what ships is \`master\` as of
-          \`${GPSP_ANCHOR}\` — the timestamp the buildbot itself stamped onto this release's
-          \`gpsp_libretro.so\` — resolved via \`${GPSP_METHOD}\`, rather than a proven match to
-          this exact binary. \`System/licenses/README.md\` says so plainly and keeps a
-          section 3(b) written offer as a backstop for the gap.
-          NOTES
-          # --repo because this job never checks out: gh works out where to publish from the
-          # git remote otherwise, and there is no repository here to ask.
-          gh release create "$GITHUB_REF_NAME" "$ZIP" --repo "$GITHUB_REPOSITORY" \
-            --title "$GITHUB_REF_NAME" --notes-file notes.md
+          case "$GITHUB_REF" in
+            refs/tags/*) tag="$GITHUB_REF_NAME" ;;
+            refs/heads/release/*) tag="${GITHUB_REF_NAME#release/}" ;;
+            *) exit 1 ;;
+          esac
+          gh release create "$tag" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "LUCKLUCK SLOT RG353PS $tag" \
+            --notes-file RELEASE-v2026.11.09.md \
+            --target "$GITHUB_SHA"
