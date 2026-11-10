@@ -242,12 +242,43 @@ impl Frontend {
         sink: std::sync::Arc<crate::audio::Device>,
         audio: crate::audio::Profile,
     ) -> Self {
+        // The 2.5 MB HUD symbol face is independent of the card's interface face. Parse it on
+        // its own worker while the library, artwork and user-selected font are prepared below;
+        // otherwise the first call to icon_face() pays this cost on the GL thread before frame 1.
+        let symbol_font_thread = std::thread::Builder::new()
+            .name("slot-symbol-font".into())
+            .spawn(|| {
+                let at = Instant::now();
+                let ready = slot_ui::warm_symbols_font();
+                (ready, at.elapsed().as_millis())
+            });
         let now = Instant::now();
         let root = platform.root().to_path_buf();
         let session = Session::boot_with_sink(root, sink, audio);
         let frontend = Self::assemble(now, platform, session);
         // 界面字体的读盘 + 解析是不碰 GL 的纯 CPU 活，跟扫卡一起塞进后台窗口。
         frontend.load_font();
+        match symbol_font_thread {
+            Ok(thread) => match thread.join() {
+                Ok((ready, elapsed_ms)) => frontend.session.boot_note(&format!(
+                    "symbols font preload {} ms ({})",
+                    elapsed_ms,
+                    if ready { "ready" } else { "unavailable" }
+                )),
+                Err(_) => frontend.session.boot_note("symbols font preload thread panicked"),
+            },
+            Err(error) => {
+                // Thread creation is best-effort. Keep the existing rendering path as a fallback.
+                let at = Instant::now();
+                let ready = slot_ui::warm_symbols_font();
+                frontend.session.boot_note(&format!(
+                    "symbols font preload fallback {} ms ({}, thread: {})",
+                    at.elapsed().as_millis(),
+                    if ready { "ready" } else { "unavailable" },
+                    error
+                ));
+            }
+        }
         frontend
     }
 

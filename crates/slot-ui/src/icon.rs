@@ -286,3 +286,10 @@ pub(crate) fn symbols_font() -> Option<&'static Font> {
     FONT.get_or_init(|| Font::from_bytes(SYMBOLS_TTF, FontSettings::default()).ok())
         .as_ref()
 }
+
+/// Parse the bundled HUD symbol face without rasterising any glyphs. Device startup calls this
+/// on a worker thread while the library and the user-selected interface font are loaded, so the
+/// first icon upload does not pay the cost of parsing a multi-megabyte font on the GL thread.
+pub fn warm_symbols_font() -> bool {
+    symbols_font().is_some()
+}

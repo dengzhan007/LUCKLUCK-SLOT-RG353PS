@@ -109,7 +109,7 @@ pub use hud::{
     ff_badge, FfState, Hud, HudKind, Millis, Plate, HUD_ICON_PX, HUD_MS, PLATE_H, PLATE_Y,
     SHELF_PLATE_H, SHELF_PLATE_R,
 };
-pub use icon::{icon_box, icon_face, Icon};
+pub use icon::{icon_box, icon_face, warm_symbols_font, Icon};
 pub use letters::{pill_face, pill_quad, Letters};
 pub use keys::{
     current, current_for, face_label, physical_for, rows as keymap_op_rows,
