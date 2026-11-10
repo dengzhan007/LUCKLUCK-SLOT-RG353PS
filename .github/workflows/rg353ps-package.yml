@@ -89,6 +89,7 @@ jobs:
           grep -Fqx '# baseos: power-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
           sh -n slot/packaging/rg353ps/build.sh
           sh -n slot/packaging/rg353ps/stage-upstream-assets.sh
+          sh -n slot/packaging/rg353ps/stage-core-pack.sh
 
       - name: Restore Rust dependency and target caches
         uses: actions/cache@v4
