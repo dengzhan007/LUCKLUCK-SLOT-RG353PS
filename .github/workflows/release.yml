@@ -142,14 +142,14 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v4
+
       - name: Download release packages
         uses: actions/download-artifact@v4
         with:
           name: luckluck-slot-rg353ps-v2026.11.09-complete
           path: release-assets
-
-      - name: Checkout release notes
-        uses: actions/checkout@v4
 
       - name: Create release
         env:
