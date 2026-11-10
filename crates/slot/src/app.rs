@@ -13206,6 +13206,7 @@ mod cheat_tests {
     #[test]
     fn native_suspend_transfers_backlight_ownership_to_baseos() {
         let mut a = bare();
+        a.baseos_sleep = None;
         assert!(a.frontend_owns_backlight(), "generic frontend owns its lid backlight");
         a.baseos_sleep = Some(std::path::PathBuf::from("/usr/sbin/rg353ps-sleep"));
         assert!(!a.frontend_owns_backlight(), "BaseOS sleep helper owns backlight blank/restore");
