@@ -56,6 +56,8 @@ jobs:
           test -f baseos/platforms/rg353ps/frontends/slot/fbdev.rs
           test -f slot/packaging/rg353ps/apply-rg353ps-input.py
           python3 -m py_compile slot/packaging/rg353ps/apply-rg353ps-input.py
+          test -f slot/packaging/rg353ps/patch-slotnet-rg353ps.py
+          python3 -m py_compile slot/packaging/rg353ps/patch-slotnet-rg353ps.py
           cp slot/crates/slot/src/input/evdev.rs /tmp/evdev-rg353ps-check.rs
           python3 slot/packaging/rg353ps/apply-rg353ps-input.py /tmp/evdev-rg353ps-check.rs
           grep -Fq 'const STICK_RANGE: i32 = 504;' /tmp/evdev-rg353ps-check.rs

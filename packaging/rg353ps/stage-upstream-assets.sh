@@ -15,7 +15,7 @@ ASSET_NAME="66slot-frontend-System-640480-V20261109-fix.zip"
 ASSET_URL="https://github.com/RetroGame66/LUCKLUCK-SLOT/releases/download/$UPSTREAM_TAG/$ASSET_NAME"
 ASSET_SHA256="5f71f6b8f6fd1c6c4787158b1ccda7740f7b1d68b9b76948d14b71b3ed670c35"
 
-for cmd in curl unzip sha256sum find; do
+for cmd in curl unzip sha256sum find python3; do
   command -v "$cmd" >/dev/null 2>&1 || {
     echo "missing required asset-staging tool: $cmd" >&2
     exit 1
@@ -163,6 +163,10 @@ cp -a "$CARTS_DIR" "$STAGE/System/Carts"
 cp -a "$SYSTEM_FONTS" "$STAGE/System/fonts"
 cp -p "$UPSTREAM_ROOT/System/slotnet.sh" "$STAGE/System/slotnet.sh"
 chmod 0755 "$STAGE/System/slotnet.sh"
+# Apply only RG353PS compatibility fixes to the pinned upstream helper:
+# sysfs rfkill fallback (the BaseOS rootfs has no rfkill CLI) and explicit
+# scan-request diagnostics. Association and DHCP remain upstream-owned.
+python3 "$(dirname "$0")/patch-slotnet-rg353ps.py" "$STAGE/System/slotnet.sh"
 if [ -s "$UPSTREAM_ROOT/System/wifi.conf.example" ]; then
   cp -p "$UPSTREAM_ROOT/System/wifi.conf.example" "$STAGE/System/"
 fi
@@ -183,6 +187,7 @@ Imported paths: System/Carts, System/fonts, upstream System/slotnet.sh, optional
 Missing legacy machine marks:$MISSING_MACHINE_MARKS
 Legacy mark supplement: RetroGame66/LUCKLUCK-SLOT $LEGACY_TAG (only six type_*.png files, sha256 $LEGACY_SHA256)
 Not imported: System/slot, libretro cores, saves, ROMs or user content
+RG353PS slotnet patch: rfkill sysfs fallback and scan-request diagnostics
 EOF
 find "$STAGE/System/Carts" -maxdepth 2 -type f -printf '%P\\n' | sort > "$STAGE/UPSTREAM-CARTS-INDEX.txt"
 

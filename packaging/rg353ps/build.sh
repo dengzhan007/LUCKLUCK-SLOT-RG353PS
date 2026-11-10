@@ -175,6 +175,10 @@ docker run --rm --network host --platform linux/arm64 \
     done
     test -s "$PKG/Music/Fonts/unifont-16px.otf"
     test -s "$PKG/Music/Fonts/press-start-2p.ttf"
+    # Check that asset staging and package copying preserve exact font bytes.
+    cmp -s /upstream-assets/System/fonts/Plix-Bold.otf "$PKG/System/fonts/Plix-Bold.otf"
+    cmp -s /upstream-assets/Music/Fonts/unifont-16px.otf "$PKG/Music/Fonts/unifont-16px.otf"
+    cmp -s /upstream-assets/Music/Fonts/press-start-2p.ttf "$PKG/Music/Fonts/press-start-2p.ttf"
     test -d "$PKG/Overlay"
     test -d "$PKG/Bootlogos"
 
@@ -237,6 +241,31 @@ EOF
     rm -f "$ARCHIVE" "$ARCHIVE.sha256"
     cd "$PKG"
     zip -qr "$ARCHIVE" .
+    # Check the ZIP CRCs and verify its font members byte-for-byte against PKG.
+    python3 - "$ARCHIVE" "$PKG" <<'PYFONT'
+import hashlib
+import pathlib
+import sys
+import zipfile
+
+archive = pathlib.Path(sys.argv[1])
+package = pathlib.Path(sys.argv[2])
+members = (
+    "System/fonts/Plix-Bold.otf",
+    "Music/Fonts/unifont-16px.otf",
+    "Music/Fonts/press-start-2p.ttf",
+)
+with zipfile.ZipFile(archive) as zf:
+    bad = zf.testzip()
+    if bad:
+        raise SystemExit(f"ZIP CRC failure: {bad}")
+    for name in members:
+        packed = zf.read(name)
+        source = (package / name).read_bytes()
+        if packed != source:
+            raise SystemExit(f"font payload mismatch: {name}")
+        print(f"font payload OK: {name} sha256={hashlib.sha256(packed).hexdigest()}")
+PYFONT
     cd /out
     sha256sum "$(basename "$ARCHIVE")" > "$(basename "$ARCHIVE").sha256"
     ls -lh "$ARCHIVE" "$ARCHIVE.sha256"
