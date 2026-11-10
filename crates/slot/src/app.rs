@@ -10973,6 +10973,12 @@ impl App {
     /// lid only to think for a moment — there is no answer here that costs nothing — but it
     /// is the one already chosen for `PowerPress`, and completing the doze underneath it is
     /// the only way to actually reach the low-power state this function exists for.
+    // Native suspend is a hand-off: BaseOS owns physical backlight I/O while
+    // its sleep helper is installed. Generic platforms keep LidPolicy ownership.
+    fn frontend_owns_backlight(&self) -> bool {
+        self.baseos_sleep.is_none()
+    }
+
     fn doze(&mut self) {
         if self.link_active() {
             self.end_link();
@@ -11009,8 +11015,15 @@ impl App {
         self.polaroids = None;
         self.phase = Phase::Doze { cart, deck };
         self.dozed_at = self.now();
-        if let Some(power) = &mut self.power {
-            power.on_close();
+        // With native BaseOS suspend, the OS helper owns the physical backlight:
+        // it samples the current brightness, blanks the panel and restores that exact
+        // value after resume. Calling Power::on_close() here would write brightness=0
+        // before the helper samples it, so the helper would faithfully restore 0 and
+        // leave the LCD black until the user changes brightness manually.
+        if self.frontend_owns_backlight() {
+            if let Some(power) = &mut self.power {
+                power.on_close();
+            }
         }
         // Run BaseOS' sleep helper as a detached child: it stops Wi-Fi, unbinds the SDIO
         // function, selects mem_sleep=deep and blocks in /sys/power/state until the power key
@@ -11019,6 +11032,10 @@ impl App {
             if let Err(error) = std::process::Command::new(&path).spawn() {
                 eprintln!("slot: could not start BaseOS deep suspend ({}): {error}; restoring fallback timeout", path.display());
                 self.baseos_sleep = None;
+                // Native suspend failed, so the frontend fallback owns the display again.
+                if let Some(power) = &mut self.power {
+                    power.on_close();
+                }
                 let timeout = self.doze_timeout();
                 if let Some(power) = &mut self.power {
                     power.set_timeout(timeout);
@@ -11039,8 +11056,13 @@ impl App {
             (None, Some((key, disc, playing))) => Phase::Listening { key, playing, disc },
             (None, None) => Phase::Shelf,
         };
-        if let Some(power) = &mut self.power {
-            power.on_open();
+        // The BaseOS suspend helper has already restored the captured hardware
+        // brightness before returning from /sys/power/state. Do not overwrite it with
+        // Power's frontend-only level (which may still be its default zero).
+        if self.frontend_owns_backlight() {
+            if let Some(power) = &mut self.power {
+                power.on_open();
+            }
         }
     }
 
@@ -13179,6 +13201,14 @@ mod cheat_tests {
             std::fs::create_dir(d.path().join(sub)).expect("create dir");
         }
         App::boot(d.path())
+    }
+
+    #[test]
+    fn native_suspend_transfers_backlight_ownership_to_baseos() {
+        let mut a = bare();
+        assert!(a.frontend_owns_backlight(), "generic frontend owns its lid backlight");
+        a.baseos_sleep = Some(std::path::PathBuf::from("/usr/sbin/rg353ps-sleep"));
+        assert!(!a.frontend_owns_backlight(), "BaseOS sleep helper owns backlight blank/restore");
     }
 
     /// ★ 2026-10-31：**这是这次改动真正的行为**。mGBA 的 `retro_cheat_set` 是
