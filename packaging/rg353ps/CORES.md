@@ -1,7 +1,8 @@
 # RG353PS libretro cores
 
-The RG353PS port uses a separate reusable core pack. Normal frontend builds
-never rebuild or overwrite the emulator core libraries.
+The RG353PS port maintains a separately versioned, reusable core pack. The complete
+frontend release workflow now pins and merges this pack into each Chinese/English
+frontend ZIP; normal frontend builds reuse the binaries and never rebuild the cores.
 
 ## Current reusable pack
 
@@ -44,7 +45,9 @@ The build recipe is maintained on branch
 compiled objects. Rebuild only when a core source, compiler configuration or
 target ABI changes; publish a new versioned pack instead of replacing v1.0.0.
 
-The frontend test workflow builds Simplified Chinese only. Release tags build
-two frontend binaries (Chinese and English); neither job invokes the core
-builder. The versioned core pack is installed once and reused across frontend
-updates.
+The frontend test workflow builds Simplified Chinese only and remains frontend-only.
+The RG353PS release workflow builds separate Chinese and English packages, fetches
+this exact core-pack archive, verifies its SHA-256 and ELF architecture, then merges
+its System/ contents (including runtime libraries and license/source materials) into
+each complete package. It does not invoke the core builder. The standalone core-pack
+release remains available for users who need to install or update cores separately.
