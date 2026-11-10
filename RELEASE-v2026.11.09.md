@@ -1,5 +1,8 @@
 # LUCKLUCK SLOT — RG353PS 640×480 · v2026.11.09
 
+Release tag: `v2026.11.09`  
+Target: Anbernic RG353PS / RK3566 / native 640×480 / BaseOS 1.2.8.
+
 ## 简体中文
 
 这是基于上游 LUCKLUCK SLOT `v2026.11.09` 的 RG353PS / RK3566 原生 640×480 移植版。保留上游 640×480 布局，并针对 BaseOS 与 RG353PS 替换设备显示、输入和启动适配层。本次正式包同时包含前端和已验证 ABI 的模拟器核心，不再要求用户另行下载核心包。
