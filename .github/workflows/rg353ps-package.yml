@@ -17,7 +17,7 @@ on:
       baseos_ref:
         description: "BaseOS-RG353PS ref used for the device adapter"
         required: true
-        default: "af9d2c497b163ddf5845b5663c04e754a87c8d25"
+        default: "a2585a4a1a72e06b37b72db21599616741294a09"
 
 permissions:
   contents: read
@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dengzhan007/BaseOS-RG353PS
-          ref: ${{ inputs.baseos_ref || 'af9d2c497b163ddf5845b5663c04e754a87c8d25' }}
+          ref: ${{ inputs.baseos_ref || 'a2585a4a1a72e06b37b72db21599616741294a09' }}
           path: baseos
 
       - name: Validate native 640 tree and BaseOS adapter
@@ -74,6 +74,10 @@ jobs:
           grep -Fq 'ip link set wlan0 up' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
           sh -n baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
           grep -Fq 'System/slotnet.sh' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
+          grep -Fqx 'export AGS_ROOT="$SDCARD"' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fqx 'export AGS_NET_MODULE=rtw88_8821cs' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'AGS_ROOT="$FRONTEND_ROOT" "$FRONTEND_WIFI" down' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
+          grep -Fq 'AGS_ROOT="$FRONTEND_ROOT" "$FRONTEND_WIFI" up' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
           ! grep -Fq 'BASEOS_WIFI' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'export BASEOS_SLEEP=/usr/sbin/rg353ps-sleep' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'adapter_api=1' baseos/platforms/rg353ps/frontends/slot/manifest.conf
@@ -98,7 +102,7 @@ jobs:
       - name: Build Chinese test ZIP only
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
-          BASEOS_REF: ${{ inputs.baseos_ref || 'af9d2c497b163ddf5845b5663c04e754a87c8d25' }}
+          BASEOS_REF: ${{ inputs.baseos_ref || 'a2585a4a1a72e06b37b72db21599616741294a09' }}
           SLOT_REV: ${{ github.sha }}
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
