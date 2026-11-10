@@ -2248,6 +2248,9 @@ pub struct App {
     power: Option<Power>,
     /// BaseOS runtime deep-suspend hook. Absent on host builds and on systems that do not provide it.
     baseos_sleep: Option<PathBuf>,
+    /// Whether the current doze handed backlight blank/restore to the BaseOS sleep helper.
+    /// False for the music display-off path, even when BASEOS_SLEEP is available.
+    native_suspend_active: bool,
     dozed_at: Millis,
     /// When the state next has to be on the card. Moved by every resume write, not only by
     /// the autosave itself.
@@ -2527,6 +2530,7 @@ impl App {
             clock: 0.0,
             power: None,
             baseos_sleep: None,
+            native_suspend_active: false,
             dozed_at: 0,
             autosave_at: AUTOSAVE_MS,
             battery_at: BATTERY_POLL_MS,
@@ -10973,10 +10977,14 @@ impl App {
     /// lid only to think for a moment — there is no answer here that costs nothing — but it
     /// is the one already chosen for `PowerPress`, and completing the doze underneath it is
     /// the only way to actually reach the low-power state this function exists for.
-    // Native suspend is a hand-off: BaseOS owns physical backlight I/O while
-    // its sleep helper is installed. Generic platforms keep LidPolicy ownership.
+    // BaseOS owns physical backlight I/O only while this particular doze actually
+    // enters its sleep helper. Music playback is the frontend's display-only mode.
     fn frontend_owns_backlight(&self) -> bool {
-        self.baseos_sleep.is_none()
+        !self.native_suspend_active
+    }
+
+    fn should_use_native_suspend(baseos_sleep_available: bool, music_playing: bool) -> bool {
+        baseos_sleep_available && !music_playing
     }
 
     fn doze(&mut self) {
@@ -11008,6 +11016,13 @@ impl App {
         //   在放）收进 Doze 相位，唤醒直接回到随身听界面，曲子接着放。
         //   ⚠️ **这里绝不能 `player.pause()`** —— 暂停是"走开"，合盖不是；音乐
         //   要在 lid 下继续。曲终续播见 `deck_advance`。
+        // A live music decoder is the one exception to native suspend: a short
+        // power press must blank only the LCD and leave the audio device running.
+        // Use the decoder's live flag, not the phase snapshot, which may lag at
+        // the exact moment a track ends or transport state changes.
+        let music_playing = matches!(&self.phase, Phase::Listening { .. }) && self.deck.playing();
+        self.native_suspend_active =
+            Self::should_use_native_suspend(self.baseos_sleep.is_some(), music_playing);
         let deck = match &self.phase {
             Phase::Listening { key, playing, disc } => Some((*key, *disc, *playing)),
             _ => None,
@@ -11028,23 +11043,27 @@ impl App {
         // Run BaseOS' sleep helper as a detached child: it stops Wi-Fi, unbinds the SDIO
         // function, selects mem_sleep=deep and blocks in /sys/power/state until the power key
         // wakes the board. The frontend frame loop simply remains suspended with the SoC.
-        if let Some(path) = self.baseos_sleep.clone() {
-            if let Err(error) = std::process::Command::new(&path).spawn() {
-                eprintln!("slot: could not start BaseOS deep suspend ({}): {error}; restoring fallback timeout", path.display());
-                self.baseos_sleep = None;
+        if self.native_suspend_active {
+            if let Some(path) = self.baseos_sleep.clone() {
+                if let Err(error) = std::process::Command::new(&path).spawn() {
+                    eprintln!("slot: could not start BaseOS deep suspend ({}): {error}; restoring fallback timeout", path.display());
+                    self.native_suspend_active = false;
+                    self.baseos_sleep = None;
                 // Native suspend failed, so the frontend fallback owns the display again.
                 if let Some(power) = &mut self.power {
                     power.on_close();
                 }
                 let timeout = self.doze_timeout();
-                if let Some(power) = &mut self.power {
-                    power.set_timeout(timeout);
+                    if let Some(power) = &mut self.power {
+                        power.set_timeout(timeout);
+                    }
                 }
             }
         }
     }
 
     fn wake(&mut self) {
+        let restore_frontend_backlight = self.frontend_owns_backlight();
         let Phase::Doze { cart, deck } = &mut self.phase else {
             return;
         };
@@ -11056,10 +11075,10 @@ impl App {
             (None, Some((key, disc, playing))) => Phase::Listening { key, playing, disc },
             (None, None) => Phase::Shelf,
         };
-        // The BaseOS suspend helper has already restored the captured hardware
-        // brightness before returning from /sys/power/state. Do not overwrite it with
-        // Power's frontend-only level (which may still be its default zero).
-        if self.frontend_owns_backlight() {
+        // The native helper has restored its captured value only on the suspend path.
+        // For music display-off, wake the panel through the frontend's Power state.
+        self.native_suspend_active = false;
+        if restore_frontend_backlight {
             if let Some(power) = &mut self.power {
                 power.on_open();
             }
@@ -13209,7 +13228,18 @@ mod cheat_tests {
         a.baseos_sleep = None;
         assert!(a.frontend_owns_backlight(), "generic frontend owns its lid backlight");
         a.baseos_sleep = Some(std::path::PathBuf::from("/usr/sbin/rg353ps-sleep"));
-        assert!(!a.frontend_owns_backlight(), "BaseOS sleep helper owns backlight blank/restore");
+        a.native_suspend_active = true;
+        assert!(!a.frontend_owns_backlight(), "active BaseOS sleep helper owns backlight blank/restore");
+        a.native_suspend_active = false;
+        assert!(a.frontend_owns_backlight(), "music display-off remains frontend-owned even with the helper installed");
+    }
+
+    #[test]
+    fn music_playback_keeps_the_power_press_out_of_native_suspend() {
+        assert!(!App::should_use_native_suspend(false, false));
+        assert!(!App::should_use_native_suspend(false, true));
+        assert!(!App::should_use_native_suspend(true, true));
+        assert!(App::should_use_native_suspend(true, false));
     }
 
     /// ★ 2026-10-31：**这是这次改动真正的行为**。mGBA 的 `retro_cheat_set` 是
