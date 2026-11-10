@@ -59,26 +59,21 @@ jobs:
           cp slot/crates/slot/src/input/evdev.rs /tmp/evdev-rg353ps-check.rs
           python3 slot/packaging/rg353ps/apply-rg353ps-input.py /tmp/evdev-rg353ps-check.rs
           grep -Fq 'const STICK_RANGE: i32 = 504;' /tmp/evdev-rg353ps-check.rs
-          grep -Fq 'const STICK_CENTER: i32 = 519;' /tmp/evdev-rg353ps-check.rs
+          grep -Fq 'ABS_X => (15, 1023, 527)' /tmp/evdev-rg353ps-check.rs
+          grep -Fq 'ABS_Y => (15, 1023, 505)' /tmp/evdev-rg353ps-check.rs
+          grep -Fq 'ABS_RX => (15, 1023, 517)' /tmp/evdev-rg353ps-check.rs
+          grep -Fq 'ABS_RY => (15, 1023, 542)' /tmp/evdev-rg353ps-check.rs
+          grep -Fq 'all_four_rg353ps_axes_use_the_upstream_slot_stick_directions' /tmp/evdev-rg353ps-check.rs
           grep -Fq '0x13c => Btn::Menu, // Function' /tmp/evdev-rg353ps-check.rs
           test -f baseos/platforms/rg353ps/frontends/slot/launch.sh
           test -f baseos/platforms/rg353ps/frontends/slot/manifest.conf
-          test -s baseos/platforms/rg353ps/frontends/slot/slotnet.sh
-          sh -n baseos/platforms/rg353ps/frontends/slot/slotnet.sh
-          sh -n baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-wifi-connect
           sh -n baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
-          mkdir -p /tmp/rg353ps-wifi-adapter-test
-          cat > /tmp/rg353ps-wifi-adapter-test/helper <<'EOF'
-          #!/bin/sh
-          [ "${1:-}" = scan ] || exit 0
-          printf '%s\t%s\t%s\t%s\n' -54 '[WPA2-PSK-CCMP][ESS]' 2412 TestNet -80 '[ESS]' 2462 OpenNet
-          EOF
-          chmod 0755 /tmp/rg353ps-wifi-adapter-test/helper
-          BASEOS_WIFI=/tmp/rg353ps-wifi-adapter-test/helper sh baseos/platforms/rg353ps/frontends/slot/slotnet.sh scan > /tmp/rg353ps-wifi-adapter-test/actual
-          printf '%s\t%s\t%s\n' TestNet -54 1 OpenNet -80 0 > /tmp/rg353ps-wifi-adapter-test/expected
-          diff -u /tmp/rg353ps-wifi-adapter-test/expected /tmp/rg353ps-wifi-adapter-test/actual
+          grep -Fq 'modprobe rtw88_8821cs' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
+          grep -Fq 'rfkill unblock wifi' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
+          grep -Fq 'ip link set wlan0 up' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
+          grep -Fq 'System/slotnet.sh' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
+          ! grep -Fq 'BASEOS_WIFI' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'export BASEOS_SLEEP=/usr/sbin/rg353ps-sleep' baseos/platforms/rg353ps/frontends/slot/launch.sh
-          grep -Fqx 'export BASEOS_WIFI=/usr/sbin/rg353ps-wifi-connect' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'adapter_api=1' baseos/platforms/rg353ps/frontends/slot/manifest.conf
           grep -Fqx 'volume_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
           grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
