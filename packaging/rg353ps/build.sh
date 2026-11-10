@@ -11,7 +11,7 @@ FRONTEND_PORT="$BASEOS_ROOT/platforms/rg353ps/frontends/slot"
 FRONTEND_MANIFEST="$FRONTEND_PORT/manifest.conf"
 FRONTEND_LAUNCHER="$FRONTEND_PORT/launch.sh"
 for file in "$FRONTEND_MANIFEST" "$FRONTEND_LAUNCHER" \
-            "$FRONTEND_PORT/fbdev.rs" "$FRONTEND_PORT/slotnet.sh"; do
+            "$FRONTEND_PORT/fbdev.rs"; do
   [ -f "$file" ] || { echo "missing RG353PS adapter input: $file" >&2; exit 1; }
 done
 
@@ -27,7 +27,6 @@ esac
 [ "$PRIORITY" -le 9999 ] || { echo "adapter priority must be 0..9999" >&2; exit 1; }
 grep -Fqx '# baseos: volume-owned' "$FRONTEND_LAUNCHER"
 grep -Fqx '# baseos: power-owned' "$FRONTEND_LAUNCHER"
-sh -n "$FRONTEND_PORT/slotnet.sh"
 
 SLOT_REV="${SLOT_REV:-$(git -C "$REPO_ROOT" rev-parse HEAD)}"
 BASEOS_REF="${BASEOS_REF:-main}"
@@ -118,9 +117,11 @@ docker run --rm --network host --platform linux/arm64 \
       "$PKG/.baseos/frontends/slot" "$PKG/baseos/frontends/slot"
     cp "$BIN" "$PKG/System/slot"
     chmod 0755 "$PKG/System/slot"
-    # Slot calls System/slotnet.sh; BaseOS supplies this adapter to bridge its Wi-Fi control plane.
-    cp /slot-port/slotnet.sh "$PKG/System/slotnet.sh"
+    # Use the upstream card-side script. BaseOS initializes wlan0; Slot owns
+    # association, saved credentials and DHCP as it does on the upstream release.
+    cp /upstream-assets/System/slotnet.sh "$PKG/System/slotnet.sh"
     chmod 0755 "$PKG/System/slotnet.sh"
+    sh -n "$PKG/System/slotnet.sh"
 
     cp /slot-port/launch.sh "$PKG/.baseos/frontends/slot/launch.sh"
     cp /slot-port/launch.sh "$PKG/baseos/frontends/slot/launch.sh"
@@ -150,6 +151,9 @@ docker run --rm --network host --platform linux/arm64 \
     # Import only those data assets; retain the native RG353PS binary and never
     # replace separately provisioned libretro cores.
     cp -a /upstream-assets/System/Carts "$PKG/System/"
+    cp -a /upstream-assets/System/fonts "$PKG/System/"
+    test -n "$(find "$PKG/System/fonts" -maxdepth 1 -type f \\( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \\) -print -quit)"
+    test -s "$PKG/System/slotnet.sh"
     for asset_dir in Music Overlay Bootlogos; do
       test -d "/upstream-assets/$asset_dir"
       cp -a "/upstream-assets/$asset_dir" "$PKG/"
@@ -182,8 +186,9 @@ Target: Anbernic RG353PS / RK3566 / 640x480 panel / BaseOS
 Language: $LANGUAGE ($LANGUAGE_NAME)
 Display: SDL2 KMSDRM fullscreen + OpenGL ES; not the upstream Mali fbdev EGL path.
 This package contains the RG353PS frontend executable, BaseOS adapter,
-and the upstream UI art/font bundle: System/Carts/, Music/, Overlay/ and
-Bootlogos/. The main artwork is pinned to the upstream 640x480 v2026.11.09
+and the upstream UI art/font bundle: System/Carts/, System/fonts/, Music/, Overlay/ and
+Bootlogos/. It also uses the upstream System/slotnet.sh, so Slot owns Wi-Fi
+credentials, association and DHCP while BaseOS only initializes the radio. The main artwork is pinned to the upstream 640x480 v2026.11.09
 release. That package omits six legacy GB/GBC/GBA theme marks still read by
 this frontend; only those six type_*.png files are supplemented from the
 checksum-pinned upstream v2026.10.02 package. No 720-layout art is imported.
@@ -195,7 +200,7 @@ Extract this ZIP into the root of the same user-data partition that contains
 your Games and System directories. Merge the directories. Back up saves first.
 Existing System/*_libretro.so files are not deleted or replaced. The package
 replaces System/slot and installs Slot adapter and default UI asset files.
-Before updating an existing customised card, back up System/Carts/, Overlay/,
+Before updating an existing customised card, back up System/Carts/, System/fonts/, Overlay/,
 Bootlogos/ and Music/Fonts/; matching paths in the package may overwrite them.
 
 Resolution
