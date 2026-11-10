@@ -161,8 +161,12 @@ jobs:
             refs/heads/release/*) tag="${GITHUB_REF_NAME#release/}" ;;
             *) exit 1 ;;
           esac
-          gh release create "$tag" release-assets/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "LUCKLUCK SLOT RG353PS $tag" \
-            --notes-file RELEASE-v2026.11.09.md \
-            --target "$GITHUB_SHA"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" release-assets/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$tag" release-assets/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "LUCKLUCK SLOT RG353PS $tag" \
+              --notes-file RELEASE-v2026.11.09.md \
+              --target "$GITHUB_SHA"
+          fi
