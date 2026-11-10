@@ -35,7 +35,7 @@ The package also installs the BaseOS `launch.sh` and `manifest.conf` to both ada
 `packaging/rg353ps/apply-rg353ps-input.py` applies checked, narrowly scoped patches to upstream `evdev.rs`:
 
 - All four measured ADC axes are enabled: ABS_X/ABS_RX share the horizontal direction and ABS_Y/ABS_RY share the vertical direction, matching upstream Slot Stick behavior.
-- Raw range is clamped to 15–1023 and independently normalized per axis using measured centres: X=527, Y=505 (midpoint of resting readings 498/511), RX=517 (midpoint of observed 511–523), RY=542. Upstream edge/dead-zone hysteresis is retained.
+- Raw range is clamped to 15–1023 and independently normalized per axis using measured centres: X=527, Y=505 (midpoint of resting readings 498/511), RX=517 (midpoint of observed 511–523), RY=542. Upstream edge/dead-zone hysteresis is retained. Both vertical ADC axes are inverted to preserve the RG353PS physical direction convention (positive raw Y means Up, while upstream Slot's positive menu Y means Down).
 - Physical face/shoulder/Function/D-pad mapping is retained from the tested RG353PS adapter.
 - Linux KEY_POWER (116) remains included in the event-node capability filter.
 
