@@ -280,25 +280,17 @@ LUCKLUCK SLOT 运行在 **BaseOS** 上。BaseOS **同时支持单卡（TF1）与
 
 ---
 
-## 配套工具箱
+## 开机画面与开机片
 
-`slot-companion-toolbox-*-win64.zip`（Windows）。**不是**前端的一部分 —— 前端从不调用它。它做那些本来要走 adb 会话的卡维护，单个自包含 exe，经 adb 与设备通信。
+开机静态画面与开机片是两个独立资源。静态画面从设置页的 `Bootlogos/` 中选择；可选开机片放在 `System/boot_opening.slotvid`，在静态画面之后、货架首帧之前播放。
 
-> **工具箱正在重做，这次发布不带它。** 下表描述的是将来跟它一起发的版本；2026-11-09 的前端包里没有工具箱。
+`.slotvid` v1 文件由 64 字节头、每帧 16 字节索引，以及逐帧 JPEG 和对应 PCM 音频片段组成。RG353PS 使用原生 **640×480** 尺寸。开机片是可选的，删除该文件即可跳过动画。
 
-| 按钮 | 功能 |
-|---|---|
-| **卡带编辑器** | 按机种改壳色、卡带图、标志和覆膜 —— 就是前端从 `System/Carts/carts.tsv` 读的那张表。 |
-| **管理贴纸** | 导入 / 同步 `Labels/` 图，并按前端实际画出来的贴纸尺寸规范化。 |
-| **开机画面** | 预览并替换卡上开机图（缩放到屏幕尺寸、24 位 BMP）。 |
-| **备份存档** | 把 `Saves/` 与 `States/` 拉到电脑上带时间戳的文件夹。 |
-| **还原存档** | 把备份推回；覆盖前会询问。 |
-| **一键对时** | 把电脑时间写进板载 RTC。 |
-| **WiFi 直连** | 经 USB 写好 `System/wifi.conf`，之后走前端「直连」页起的那个 WiFi 收发文件。 |
-| **字体瘦身** | 把界面字体裁到这张卡的游戏名与界面实际用到的字，推到 `Music/Fonts/`。重启生效。 |
-| **还原字体** | 推回完整字体。重启生效。 |
+## SLOTVID STUDIO（开机片制作工具）
 
----
+[从上游 Release 下载 `slotvid-studio.zip`](https://github.com/RetroGame66/LUCKLUCK-SLOT/releases/download/v2026.11.09/slotvid-studio.zip)（Windows，单文件自包含工具）。它把普通视频转换为 `boot_opening.slotvid`，是独立工具，不包含在 RG353PS 前端 ZIP 中；不需要单独安装 Python、ffmpeg，也不需要联网。
+
+为 RG353PS 选择 **640×480**，再设置 cover / contain / stretch、24 或 30 fps、是否保留声音及片段时长。建议约 **5 秒**，因为动画会与前端启动工作重叠；时间过长会增加开机等待。生成后把 `boot_opening.slotvid` 复制到卡上的 `System/` 目录。
 
 ## 构建（开发者）
 
