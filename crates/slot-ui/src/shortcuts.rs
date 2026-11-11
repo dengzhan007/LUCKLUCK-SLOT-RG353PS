@@ -265,7 +265,7 @@ pub const ROWS: [Row; 61] = [
 /// is what it is: the order, the key lines and the counts are identical, and only the words move.
 /// Measured against the column budget above, not eyeballed — see the note on the Chinese table.
 #[cfg(feature = "lang-en")]
-pub const ROWS: [Row; 60] = [
+pub const ROWS: [Row; 61] = [
     Row::Head("On any screen"),
     Row::Key(&[Seg::Btn("SELECT"), Seg::Sep("+"), Seg::Btn("UP/DN")], "Brightness"),
     Row::Key(&[Seg::Btn("SELECT"), Seg::Sep("+"), Seg::Btn("L/R")], "Blue light"),
