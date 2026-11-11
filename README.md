@@ -386,26 +386,17 @@ over adb — it pushes the binary to `System/slot`, chmods it, clears the cache 
 hand: `adb push System/slot /mnt/sdcard/System/slot && adb shell chmod 0755
 /mnt/sdcard/System/slot && adb shell sync && adb reboot`.)
 
-## The companion toolbox
+## Boot picture and boot opening
 
-`slot-companion-toolbox-*-win64.zip` (Windows). **Not** part of the frontend — the frontend never
-calls it. It does the card upkeep that would otherwise be an adb session: a single self-contained
-executable that talks to the device over adb.
+The boot picture and the boot opening are separate assets. The picture is selected from `Bootlogos/` in Settings; the optional opening lives at `System/boot_opening.slotvid` and plays between the picture and the shelf's first frame.
 
-> **The toolbox is being reworked and is not shipped with this release.** The table below describes
-> the build that will go out with it; the 2026-11-09 frontend packages do not include one.
+The `.slotvid` v1 file contains a 64-byte header, a 16-byte index per frame, then the JPEG frame and its PCM audio slice. The RG353PS build uses the native **640×480** panel size. The opening is optional; remove the file to skip the animation.
 
-| Button | What it does |
-|---|---|
-| **卡带编辑器 / Cart editor** | Per-machine shell colour, cart art, the flag, and the laminate — the same table the frontend reads out of `System/Carts/carts.tsv`. |
-| **管理贴纸 / Stickers** | Import, sync and normalise `Labels/` art to the sticker size the frontend actually draws. |
-| **开机画面 / Boot picture** | Previews and replaces the card's boot picture (scaled/cropped to the screen, 24-bit BMP). |
-| **备份存档 / Back up saves** | Pulls `Saves/` and `States/` to a timestamped folder on the PC. |
-| **还原存档 / Restore saves** | Pushes a backup back; asks before overwriting. |
-| **一键对时 / Set clock** | Writes the PC's time to the board's RTC. |
-| **WiFi 直连 / Wi-Fi** | Provisions `System/wifi.conf` over USB, then pulls and pushes files over the same Wi-Fi the frontend's direct-connect page brings up. |
-| **字体瘦身 / Subset font** | Cuts the interface typeface down to the characters this card's game names and the interface actually use, and pushes it to `Music/Fonts/`. Reboot to apply. |
-| **还原字体 / Restore font** | Pushes the full typeface back. Reboot to apply. |
+## SLOTVID STUDIO
+
+[Download `slotvid-studio.zip` from the upstream release](https://github.com/RetroGame66/LUCKLUCK-SLOT/releases/download/v2026.11.09/slotvid-studio.zip) (Windows, self-contained). SLOTVID STUDIO converts a video into `boot_opening.slotvid`; it is a separate utility, not part of the RG353PS frontend ZIP. No Python, separate ffmpeg installation, or network access is required.
+
+Choose **640×480** for RG353PS, select cover / contain / stretch, 24 or 30 fps, audio, and clip length. Around **5 seconds** is recommended because the opening plays while the frontend finishes startup. Copy the generated `boot_opening.slotvid` into `System/` on the card.
 
 ## Building
 
