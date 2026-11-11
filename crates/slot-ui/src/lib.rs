@@ -146,7 +146,7 @@ pub use plate::{
     arrows_hint_face, arrows_hint_width, cap_width, clock_face, clock_width, dialog_line_face,
     hint_face, hint_quad, hint_row, hint_width, page_face, plate_battery_x, plate_divider_rect,
     plate_fav_x, plate_mark_y,
-    shelf_title_face, title_face, word_face, word_width, Hint, UndoFace, ARROW_GAP, CAP,
+    shelf_title_face, title_face, wifi_key_face, word_face, word_width, Hint, UndoFace, ARROW_GAP, CAP,
     CAP_GAP, HINT_EDGE, HINT_GAP, HINT_H, PAGE_H, PAGE_MAX_W, PLATE_MARK, SHELF_TITLE_H,
     SHELF_TITLE_W, STATUS_H, TITLE_H, TITLE_W,
 };
