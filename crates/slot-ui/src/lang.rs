@@ -308,6 +308,10 @@ mod words {
     pub const WIFI_HINT_STATUS: &str = "A scan    X by hand    Y delete    B back";
     pub const WIFI_HINT_LIST: &str = "Up and down to choose    A pick    B back";
     pub const WIFI_HINT_EDIT: &str = "A types    B erases    L/R layer    START done";
+    pub const SEARCH_TITLE: &str = "Search";
+    pub const SEARCH_HINT_GRID: &str = "D-pad pick  A type  B erase  L/R layer";
+    pub const SEARCH_HINT_ACT: &str = "X all  START apply  MENU cancel";
+    pub const SEARCH_EMPTY: &str = "No matching games";
 }
 
 #[cfg(not(feature = "lang-en"))]
@@ -565,6 +569,10 @@ mod words {
     pub const WIFI_HINT_STATUS: &str = "A 扫描    X 手动输入    Y 删除    B 返回";
     pub const WIFI_HINT_LIST: &str = "上下选择    A 确定    X 手动    B 返回";
     pub const WIFI_HINT_EDIT: &str = "A 输入    B 退格    L/R 换层    START 完成";
+    pub const SEARCH_TITLE: &str = "搜索游戏";
+    pub const SEARCH_HINT_GRID: &str = "方向选字  A输入  B退格  L/R换层";
+    pub const SEARCH_HINT_ACT: &str = "X全部  START应用  MENU取消";
+    pub const SEARCH_EMPTY: &str = "没有匹配的游戏";
 }
 
 pub use words::*;

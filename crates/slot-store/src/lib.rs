@@ -10,6 +10,7 @@ mod ring;
 mod rom;
 mod sav;
 mod scan;
+pub mod search;
 mod slot_state;
 mod slots;
 mod wifi;
@@ -28,7 +29,7 @@ pub use gba::{
 pub use migrate::{migrate_states, MigrationReport};
 pub use name::{clean_label, clean_label_stripped, init_label_config, label_tags, set_strip_tags};
 pub use paging::{cycle_on_page, index_of, len_on, pages, step_cursor, step_page};
-pub use pinyin::initial;
+pub use pinyin::{initial, letter_of};
 pub use ring::{StateEntry, StateRing, RING_MAX};
 pub use rom::{is_zip, read_rom, read_rom_named, RomError};
 pub use sav::{describe, is_rzip, save_plan, SavePlan, BLANK};

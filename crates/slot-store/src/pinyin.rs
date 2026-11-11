@@ -550,9 +550,11 @@ const LETTERS: &[u8] = b"YDQWZSSXJBYGCZQPSQBYCDSCDLYSGGYQZFCLZWDWZLJPNJTMYZWZHFL
 /// Snowboarding` under `1` bought a facet on the shelf's ring for a title nobody looks for by
 /// number, and the ring is a dial a hand crosses, so a facet has to be worth the crossing.
 pub fn initial(title: &str) -> char {
-    let Some(c) = title.chars().next() else {
-        return '#';
-    };
+    title.chars().next().map(letter_of).unwrap_or('#')
+}
+
+/// Return the pinyin initial for one character, shared by shelf indexing and title search.
+pub fn letter_of(c: char) -> char {
     if c.is_ascii_alphabetic() {
         return c.to_ascii_uppercase();
     }

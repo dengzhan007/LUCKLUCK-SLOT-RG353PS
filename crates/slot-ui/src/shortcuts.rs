@@ -197,7 +197,7 @@ impl Row {
 /// 补上的新行：`L3`/`R3`（2026-11-03，按一下即亮度/蓝光 +1）、摇杆（与十字键同义）、
 /// 货架 `SELECT+R1` 界面配色（`cycle_look`，7 档）、以及像素随身听整节。
 #[cfg(not(feature = "lang-en"))]
-pub const ROWS: [Row; 60] = [
+pub const ROWS: [Row; 61] = [
     Row::Head("任何界面"),
     Row::Key(&[Seg::Btn("SELECT"), Seg::Sep("+"), Seg::Btn("上"), Seg::Sep("/"), Seg::Btn("下")], "亮度"),
     Row::Key(&[Seg::Btn("SELECT"), Seg::Sep("+"), Seg::Btn("左"), Seg::Sep("/"), Seg::Btn("右")], "蓝光滤镜"),
@@ -216,6 +216,7 @@ pub const ROWS: [Row; 60] = [
     Row::Key(&[Seg::Sep("轻点"), Seg::Btn("Y")], "切换子文件夹"),
     Row::Key(&[Seg::Sep("长按"), Seg::Btn("Y")], "选择机种货架"),
     Row::Key(&[Seg::Sep("长按"), Seg::Btn("B")], "直连：开 WiFi 传文件"),
+    Row::Key(&[Seg::Btn("SELECT"), Seg::Sep("+"), Seg::Btn("Y")], "首字母搜索（全键盘）"),
     Row::Key(&[Seg::Btn("START")], "为这张卡挑一个模拟器"),
     Row::Key(&[Seg::Btn("MENU")], "主菜单"),
     Row::Key(&[Seg::Btn("SELECT"), Seg::Sep("+"), Seg::Btn("START")], "日间 / 夜间主题"),
@@ -264,7 +265,7 @@ pub const ROWS: [Row; 60] = [
 /// is what it is: the order, the key lines and the counts are identical, and only the words move.
 /// Measured against the column budget above, not eyeballed — see the note on the Chinese table.
 #[cfg(feature = "lang-en")]
-pub const ROWS: [Row; 60] = [
+pub const ROWS: [Row; 61] = [
     Row::Head("On any screen"),
     Row::Key(&[Seg::Btn("SELECT"), Seg::Sep("+"), Seg::Btn("UP/DN")], "Brightness"),
     Row::Key(&[Seg::Btn("SELECT"), Seg::Sep("+"), Seg::Btn("L/R")], "Blue light"),
@@ -283,6 +284,7 @@ pub const ROWS: [Row; 60] = [
     Row::Key(&[Seg::Sep("Tap"), Seg::Btn("Y")], "Switch subfolder"),
     Row::Key(&[Seg::Sep("Hold"), Seg::Btn("Y")], "Pick the machine"),
     Row::Key(&[Seg::Sep("Hold"), Seg::Btn("B")], "WiFi file transfer"),
+    Row::Key(&[Seg::Btn("SELECT"), Seg::Sep("+"), Seg::Btn("Y")], "Search by initials"),
     Row::Key(&[Seg::Btn("START")], "Pick the core"),
     Row::Key(&[Seg::Btn("MENU")], "Menu"),
     Row::Key(&[Seg::Btn("SELECT"), Seg::Sep("+"), Seg::Btn("START")], "Day / night theme"),

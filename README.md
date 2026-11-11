@@ -103,6 +103,7 @@ LUCKLUCK SLOT turns a BaseOS handheld into a shelf of game carts. Beyond upstrea
 - **A music player** (像素随身听) that grew into a deck: two faces on a four-shade LCD panel, 40
   colour ramps, scrolling lyrics and a ten-band equaliser, reached from the menu and returning to
   its own disc shelf.
+- **Search by initials** — press `SELECT`+`Y` on the game shelf to open a full keyboard. Type pinyin initials (`cjjq` for 超级机器人大战) or a title substring; `X` restores the pre-search shelf, `START` applies, and `MENU` cancels.
 - **Saves in numbered slots**, plus a save-state browser that reaches every cart, and cheats that
   live with the cart rather than in one global file.
 - **A boot opening** between your own boot picture and the shelf's first frame.
@@ -183,11 +184,14 @@ A `+` means both together. The full, always-current list is on the device: **MEN
 | Tap `Y` | Switch subfolder — and, on the music side, between tapes and games |
 | Hold `Y` | Pick the machine's shelf (the blind comes down, the picker floats on it) |
 | Hold `B` | Direct connect: the card's Wi-Fi comes up, the screen shows an address, a PC reaches it over sftp — no need to pull the card |
+| `SELECT` + `Y` | Search game titles by pinyin initials or literal text (game shelf only) |
 | `START` | Pick the core for this cart |
 | `MENU` | Main menu (and the shortcut card under it) |
 | `SELECT` + `START` | Day / night theme |
 | `SELECT` + `R1` | Interface palette (7) |
 | `SELECT` + `VOL+` / `VOL-` | Audio-latency profile |
+
+Search uses four keyboard layers (`abc / ABC / 123 / #+=`): `L1`/`R1` switch layers, the D-pad moves, `A` types and `B` erases. `X` restores the pre-search shelf, `START` applies the result, and `MENU` cancels. Matching uses pinyin initials or a literal substring; polyphonic Chinese characters use the reading in the built-in table.
 
 ### In game — common to every machine
 

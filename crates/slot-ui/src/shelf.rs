@@ -543,6 +543,11 @@ impl Shelf {
         self.carts.get(self.current()?)
     }
 
+    /// Copy the active view so overlays can restore favourites/folder/machine filters exactly.
+    pub fn view_snapshot(&self) -> Vec<usize> {
+        self.view.clone()
+    }
+
     /// Whether the view is narrower than the library — i.e. the favourites shelf is up.
     pub fn filtered(&self) -> bool {
         self.view.len() != self.carts.len()

@@ -632,6 +632,35 @@ pub struct WifiFaces {
     pub nets: Vec<(TexId, u32, u32)>,
 }
 
+/// ★ 2026-11-11：**货架首字母搜索浮层**（SELECT+Y）。
+///
+/// 键盘就是 Wi-Fi 配置浮层那张四层全键盘（`WIFI_LAYERS` + `wifi_glyphs`），一本不另烤：
+/// a–z / A–Z / 0–9 / 符号四层，方向键走格、A 输入、B 退格、L/R 换层。
+///
+/// **它不碰 `Shelf` 的过滤维度**，只借 `set_view` 做实时预览：
+/// `back_view` 是进来那一刻的整份快照，取消时 `set_view(back_view, back_stem)` 原样还回去，
+/// 所以收藏夹 / 子文件夹 / 机种货架怎么叠着进来，就怎么叠着回去（§6d、§6g 两个坑）。
+/// `hits` 是本次命中的索引表；空结果时**不换 view**（空 view 会触发顶层空兜底跳去
+/// 子文件夹），只把提示换成「没有匹配的游戏」，货架停在上一批结果上。
+pub struct SearchState {
+    pub query: String,
+    pub layer: usize,
+    pub row: usize,
+    pub col: usize,
+    pub back_view: Vec<usize>,
+    pub back_stem: Option<String>,
+    pub hits: Vec<usize>,
+}
+
+/// 搜索浮层的四张定句脸：标题、网格键位、动作键位、空结果。输入串和键帽都用
+/// `wifi_glyphs` 逐字拼，一个键都不用重烘。
+pub struct SearchFaces {
+    pub title: (TexId, u32, u32),
+    pub hint_grid: (TexId, u32, u32),
+    pub hint_act: (TexId, u32, u32),
+    pub empty: (TexId, u32, u32),
+}
+
 /// Which end of a link this device is offering to be. The player picks; there is no
 /// discovery on this network and nothing to negotiate it with.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -1854,6 +1883,12 @@ pub struct App {
     wifi_faces: Option<WifiFaces>,
     /// 上面那些会变的脸要不要重烤。
     wifi_dirty: bool,
+    /// Search overlay; the application phase remains Shelf while it is open.
+    search: Option<SearchState>,
+    /// View active before the first search in a filter chain.
+    search_origin: Option<(Vec<usize>, Option<String>)>,
+    /// Four fixed labels drawn by the search overlay.
+    search_faces: Option<SearchFaces>,
     /// The picker while the cart is open, and while its lid is going back on. The cart it acts
     /// on is whichever the shelf has, read when it opens rather than held here: the shelf cannot
     /// move while it is up, so there is only ever one answer.
@@ -2579,6 +2614,9 @@ impl App {
             wifi_glyphs: None,
             wifi_faces: None,
             wifi_dirty: false,
+            search: None,
+            search_origin: None,
+            search_faces: None,
         }
     }
 
@@ -4653,6 +4691,8 @@ impl App {
     /// ★ 2026-10-28：刷新行已无「已刷新」回执词（`Refresh` 不再有值），所以这里也**没有**要
     ///   摆回执的 `library_note` 了 —— `A` 就是做，做完了该换的库已经换了。
     fn refresh_library(&mut self) {
+        self.search = None;
+        self.search_origin = None;
         let Some(root) = self.root.clone() else {
             return;
         };
@@ -6094,6 +6134,9 @@ impl App {
         if self.wifi.is_some() {
             return self.wifi_input(action);
         }
+        if self.search.is_some() {
+            return self.search_input(action);
+        }
         let now = self.now();
         // Ahead of the match that borrows the phase: the card's limit is a fact about how many
         // rows are on it, not about the press that is being answered.
@@ -6227,6 +6270,12 @@ impl App {
                 // own `ags-net`; it is back now that the same work runs on the card, so the
                 // same card does it on either dock.
                 Action::GbaDown(Btn::B) => self.mtp_held = Some(now),
+                // A tap must consume the pending hold; only a real hold opens direct-connect.
+                Action::GbaUp(Btn::B) => {
+                    self.mtp_held = None;
+                }
+                // SELECT+Y is free on the game shelf; the disc shelf keeps its own controls.
+                Action::ColorCycle if self.row == ShelfRow::Games => self.open_search(),
                 Action::Insert => self.insert(false),
                 _ => {}
             },
@@ -7368,6 +7417,10 @@ impl App {
         // The Wi-Fi config screen, in the same seat: the whole panel while it is up.
         if self.wifi.is_some() {
             self.draw_wifi(out);
+            return;
+        }
+        if self.search.is_some() {
+            self.draw_search(out);
             return;
         }
         if let Some(index) = self.cheat_menu {
@@ -9454,6 +9507,322 @@ impl App {
                 }
             }
         }
+    }
+
+    // =====================================================================================
+    // ★ 2026-11-11：货架首字母搜索（SELECT+Y）
+    //
+    // 键盘复刻 Wi-Fi 录入那张四层全键盘：同样的 `WIFI_LAYERS`、同样的 `wifi_glyphs`、
+    // 同样的几何常量。区别只在「打进去的串拿去筛货架」而不是「写进 wifi.conf」。
+    // 不做 T9：这台机器没有 0–9 数字键，九宫格只能退化成另一个方向键网格，
+    // 而拼音首字母串也没有词库可供 T9 预测（2026-11-11 评估结论）。
+    // =====================================================================================
+
+    /// 前端用：浮层开没开、定句脸在不在、以及整族放走。
+    pub fn search_open(&self) -> bool {
+        self.search.is_some()
+    }
+    pub fn search_faces(&self) -> Option<&SearchFaces> {
+        self.search_faces.as_ref()
+    }
+    pub fn set_search_faces(&mut self, faces: Option<SearchFaces>) {
+        self.search_faces = faces;
+    }
+
+    /// 触发：货架上 SELECT+Y。进来的那一刻把整份 `view` 和光标上的卡名一起存下，
+    /// 取消时原样还回去；`search_origin` 只在没有筛选链时记一次，供「X 全部」回全库。
+    fn open_search(&mut self) {
+        if self.row != ShelfRow::Games || self.search.is_some() {
+            return;
+        }
+        let back_view = self.shelf.view_snapshot();
+        let back_stem = self.shelf.current_cart().map(|c| c.stem.clone());
+        if self.search_origin.is_none() {
+            self.search_origin = Some((back_view.clone(), back_stem.clone()));
+        }
+        self.search = Some(SearchState {
+            query: String::new(),
+            layer: 0,
+            row: 0,
+            col: 0,
+            hits: back_view.clone(),
+            back_view,
+            back_stem,
+        });
+        // 空查询不调 apply_search：一进来就把光标弹到第一张卡，是这功能最不需要的动画。
+    }
+
+    /// `START` 应用（货架留在筛出来的那批上）/ `MENU` 取消（原样还原）。
+    /// 空结果时两者同义：没有任何一批结果值得留下来。
+    fn close_search(&mut self, apply: bool) {
+        let Some(s) = self.search.take() else {
+            return;
+        };
+        if !apply || s.hits.is_empty() {
+            self.shelf.set_view(s.back_view, s.back_stem.as_deref());
+        }
+        // 应用时 `search_origin` 故意留着：下一次开搜索按 X 仍能一步回全库。
+    }
+
+    /// 网格的键。和 Wi-Fi 录入页同一套手感，只多了 X / START / MENU 三个动作。
+    fn search_input(&mut self, action: Action) {
+        match action {
+            Action::GbaDown(Btn::Left) => {
+                if let Some(s) = self.search.as_mut() {
+                    s.col = s.col.saturating_sub(1);
+                }
+            }
+            Action::GbaDown(Btn::Right) => {
+                if let Some(s) = self.search.as_mut() {
+                    let max = WIFI_LAYERS[s.layer].cols - 1;
+                    s.col = (s.col + 1).min(max);
+                }
+            }
+            Action::GbaDown(Btn::Up) => {
+                if let Some(s) = self.search.as_mut() {
+                    s.row = s.row.saturating_sub(1);
+                }
+            }
+            Action::GbaDown(Btn::Down) => {
+                if let Some(s) = self.search.as_mut() {
+                    let max = WIFI_LAYERS[s.layer].rows - 1;
+                    s.row = (s.row + 1).min(max);
+                }
+            }
+            Action::GbaDown(Btn::L1) => {
+                let n = WIFI_LAYERS.len();
+                if let Some(s) = self.search.as_mut() {
+                    s.layer = (s.layer + n - 1) % n;
+                    s.row = s.row.min(WIFI_LAYERS[s.layer].rows - 1);
+                    s.col = s.col.min(WIFI_LAYERS[s.layer].cols - 1);
+                }
+            }
+            Action::GbaDown(Btn::R1) => {
+                let n = WIFI_LAYERS.len();
+                if let Some(s) = self.search.as_mut() {
+                    s.layer = (s.layer + 1) % n;
+                    s.row = s.row.min(WIFI_LAYERS[s.layer].rows - 1);
+                    s.col = s.col.min(WIFI_LAYERS[s.layer].cols - 1);
+                }
+            }
+            Action::GbaDown(Btn::A) => self.search_type_cell(),
+            Action::GbaDown(Btn::B) => {
+                if let Some(s) = self.search.as_mut() {
+                    s.query.pop();
+                }
+                self.apply_search();
+            }
+            // 「X 全部」：清输入并把货架放回这一轮筛选开始之前的样子。
+            Action::GbaDown(Btn::X) => self.search_clear(),
+            Action::GbaDown(Btn::Start) => self.close_search(true),
+            Action::OpenMenu => self.close_search(false),
+            _ => {}
+        }
+    }
+
+    /// A：把光标下那一格敲进查询串，立刻重筛。
+    fn search_type_cell(&mut self) {
+        let Some(s) = self.search.as_ref() else {
+            return;
+        };
+        let layer = WIFI_LAYERS[s.layer];
+        let Some(&byte) = layer.chars.as_bytes().get(s.row * layer.cols + s.col) else {
+            return;
+        };
+        let c = byte as char;
+        // 键盘末尾那几格是留白，不是字符；24 个字符已经顶满 640px 的输入行。
+        if c == ' ' || s.query.chars().count() >= 24 {
+            return;
+        }
+        if let Some(s) = self.search.as_mut() {
+            s.query.push(c);
+        }
+        self.apply_search();
+    }
+
+    /// 「X 全部」。`origin` 是第一次开搜索时的视图，不是这一次进来的视图 ——
+    /// 所以 START 应用过筛选之后，再开一次搜索按 X 也能回到没筛之前。
+    fn search_clear(&mut self) {
+        let Some((view, stem)) = self.search_origin.clone() else {
+            return;
+        };
+        if let Some(s) = self.search.as_mut() {
+            s.query.clear();
+            s.back_view = view.clone();
+            s.back_stem = stem.clone();
+            s.hits = view.clone();
+        }
+        self.shelf.set_view(view, stem.as_deref());
+        self.search_origin = None;
+    }
+
+    /// 边打边缩。**只在 `back_view` 里筛**：收藏夹、子文件夹、机种货架都是它的子集，
+    /// 搜索不该把用户刚切好的范围偷偷放大回全库。
+    fn apply_search(&mut self) {
+        let Some(s) = self.search.as_ref() else {
+            return;
+        };
+        let q = s.query.clone();
+        let base = s.back_view.clone();
+        if q.trim().is_empty() {
+            self.shelf.set_view(base.clone(), None);
+            if let Some(s) = self.search.as_mut() {
+                s.hits = base;
+            }
+            return;
+        }
+        let hits: Vec<usize> = base
+            .iter()
+            .copied()
+            .filter(|&i| {
+                self.shelf
+                    .carts
+                    .get(i)
+                    .is_some_and(|c| slot_store::search::matches(&q, &c.stem))
+            })
+            .collect();
+        if hits.is_empty() {
+            // 空 view 不是「没有结果」，是顶层空兜底（§6d）会莫名其妙跳进子文件夹。
+            // 保留上一批结果，只把提示行换成「没有匹配的游戏」。
+            if let Some(s) = self.search.as_mut() {
+                s.hits.clear();
+            }
+            return;
+        }
+        self.shelf.set_view(hits.clone(), None);
+        if let Some(s) = self.search.as_mut() {
+            s.hits = hits;
+        }
+    }
+
+    /// 整屏浮层：半透明纱 + 标题 + 输入串 + 动作提示 + 层标 + 键盘 + 页脚。
+    /// 字形全部来自 `wifi_glyphs`，一个键都不用重烘纹理。
+    fn draw_search(&self, out: &mut Vec<Draw>) {
+        let mut veil = slot_ui::opening();
+        veil[3] = 0.78;
+        out.push(Draw::Rect {
+            x: 0.0,
+            y: 0.0,
+            w: OUT_W as f32,
+            h: OUT_H as f32,
+            colour: veil,
+        });
+        let (Some(faces), Some(s)) = (self.search_faces.as_ref(), self.search.as_ref()) else {
+            return;
+        };
+        let ink = slot_ui::palette::ink_f();
+        let dim = [ink[0] * 0.35, ink[1] * 0.35, ink[2] * 0.35, 1.0];
+        let (t, tw, th) = faces.title;
+        out.push(Draw::Tex {
+            x: (OUT_W as f32 - tw as f32) / 2.0,
+            y: WIFI_TITLE_Y,
+            w: tw as f32,
+            h: th as f32,
+            tex: t,
+            alpha: 1.0,
+        });
+        // 输入串：照实回显（不是密码），逐字拿网格字形拼。
+        let mut cx = WIFI_MARGIN;
+        for c in s.query.chars() {
+            let Some((tex, gw, gh)) = self.wifi_glyph(c) else {
+                continue;
+            };
+            out.push(Draw::Tex {
+                x: cx,
+                y: WIFI_EDIT_TEXT_Y,
+                w: gw as f32,
+                h: gh as f32,
+                tex,
+                alpha: 1.0,
+            });
+            cx += gw as f32 + 2.0;
+        }
+        out.push(Draw::Rect {
+            x: cx,
+            y: WIFI_EDIT_TEXT_Y,
+            w: 2.0,
+            h: 20.0,
+            colour: ink,
+        });
+        // 动作提示；一个字都搜不到时换成专用提示，绝不交一个空 view 给货架。
+        let (a, aw, ah) = if s.hits.is_empty() && !s.query.trim().is_empty() {
+            faces.empty
+        } else {
+            faces.hint_act
+        };
+        out.push(Draw::Tex {
+            x: WIFI_MARGIN,
+            y: WIFI_EDIT_NOTE_Y,
+            w: aw as f32,
+            h: ah as f32,
+            tex: a,
+            alpha: 1.0,
+        });
+        // 当前层标记：abc / ABC / 123 / #+=，右对齐在提示行尾端。
+        let tag: &[char] = match s.layer {
+            0 => &['a', 'b', 'c'],
+            1 => &['A', 'B', 'C'],
+            2 => &['1', '2', '3'],
+            _ => &['#', '+', '='],
+        };
+        let mut tx = OUT_W as f32 - WIFI_MARGIN;
+        for &c in tag.iter().rev() {
+            if let Some((tex, gw, gh)) = self.wifi_glyph(c) {
+                tx -= gw as f32 + 2.0;
+                out.push(Draw::Tex {
+                    x: tx,
+                    y: WIFI_EDIT_NOTE_Y + 12.0,
+                    w: gw as f32,
+                    h: gh as f32,
+                    tex,
+                    alpha: 1.0,
+                });
+            }
+        }
+        // 四层全键盘：选中格一块淡底，字画在它上面。
+        let layer = WIFI_LAYERS[s.layer];
+        let grid_w = layer.cols as f32 * (WIFI_CELL + WIFI_CELL_GAP) - WIFI_CELL_GAP;
+        let gx = (OUT_W as f32 - grid_w) / 2.0;
+        for row in 0..layer.rows {
+            for col in 0..layer.cols {
+                let at = row * layer.cols + col;
+                let Some(&byte) = layer.chars.as_bytes().get(at) else {
+                    continue;
+                };
+                let x = gx + col as f32 * (WIFI_CELL + WIFI_CELL_GAP);
+                let y = WIFI_GRID_Y + row as f32 * (WIFI_CELL + WIFI_CELL_GAP);
+                let chosen = row == s.row && col == s.col;
+                out.push(Draw::Rect {
+                    x,
+                    y,
+                    w: WIFI_CELL,
+                    h: WIFI_CELL,
+                    colour: if chosen { ink } else { dim },
+                });
+                let c = byte as char;
+                if c != ' ' {
+                    if let Some((tex, gw, gh)) = self.wifi_glyph(c) {
+                        out.push(Draw::Tex {
+                            x: x + (WIFI_CELL - gw as f32) / 2.0,
+                            y: y + (WIFI_CELL - gh as f32) / 2.0,
+                            w: gw as f32,
+                            h: gh as f32,
+                            tex,
+                            alpha: 1.0,
+                        });
+                    }
+                }
+            }
+        }
+        let (h, hw, hh) = faces.hint_grid;
+        out.push(Draw::Tex {
+            x: (OUT_W as f32 - hw as f32) / 2.0,
+            y: WIFI_FOOT_Y,
+            w: hw as f32,
+            h: hh as f32,
+            tex: h,
+            alpha: 1.0,
+        });
     }
 
     /// Run the enter/exit shell detached, so the dialog keeps drawing while the radio comes up.
