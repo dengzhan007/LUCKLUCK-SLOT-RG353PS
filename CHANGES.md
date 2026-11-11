@@ -1001,3 +1001,13 @@ trace 现在录 ABS 轴 —— 上面两个坑都是它抓出来的。随身听�
 
 **开机时间。** 卡面字体按该卡名字实际用到的字做子集，封面与面板字体改成首次使用才加载，
 900 个游戏不再开一次机就付 900 个名字的字形成本。开机各阶段都打了计时，数字是量出来的。
+
+
+---
+
+## 2026-11-11 · RG353PS / native-640 upstream sync
+
+- **Shelf search by initials.** `SELECT+Y` opens the existing four-layer Wi-Fi keyboard on the game shelf. It matches pinyin initials and literal title substrings, previews results as you type, and restores the prior view on cancel. `X` restores the pre-search view, `START` applies, and `MENU` cancels.
+- **Short B press no longer opens Wi-Fi direct connect.** `Phase::Shelf` clears `mtp_held` on `GbaUp(B)`; holding B still invokes the existing direct-connect action.
+- **Keyboard case handling retained.** The RG353PS port already uses `wifi_key_face()` to rasterize the selected glyph without forced uppercase conversion; the search UI reuses the cached glyphs.
+- Search is restricted to the game shelf, leaving the disc/music shelf and its controls unchanged.
