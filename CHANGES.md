@@ -1011,3 +1011,9 @@ trace 现在录 ABS 轴 —— 上面两个坑都是它抓出来的。随身听�
 - **Short B press no longer opens Wi-Fi direct connect.** `Phase::Shelf` clears `mtp_held` on `GbaUp(B)`; holding B still invokes the existing direct-connect action.
 - **Keyboard case handling retained.** The RG353PS port already uses `wifi_key_face()` to rasterize the selected glyph without forced uppercase conversion; the search UI reuses the cached glyphs.
 - Search is restricted to the game shelf, leaving the disc/music shelf and its controls unchanged.
+
+
+## 2026-11-11 documentation sync
+
+- Removed the obsolete companion-toolbox section, which described a utility not shipped with the frontend.
+- Added the upstream SLOTVID STUDIO download and native 640×480 RG353PS instructions for creating `System/boot_opening.slotvid`.
