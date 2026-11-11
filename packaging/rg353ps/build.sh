@@ -38,6 +38,16 @@ case "$LANGUAGE" in
   zh|en) ;;
   *) echo "LANGUAGE must be zh or en (got: $LANGUAGE)" >&2; exit 2 ;;
 esac
+INCLUDE_CORE_PACK="${INCLUDE_CORE_PACK:-yes}"
+case "$INCLUDE_CORE_PACK" in
+  yes|no) ;;
+  *) echo "INCLUDE_CORE_PACK must be yes or no (got: $INCLUDE_CORE_PACK)" >&2; exit 2 ;;
+esac
+DIAGNOSTIC_NO_BOOT_SFX="${DIAGNOSTIC_NO_BOOT_SFX:-no}"
+case "$DIAGNOSTIC_NO_BOOT_SFX" in
+  yes|no) ;;
+  *) echo "DIAGNOSTIC_NO_BOOT_SFX must be yes or no (got: $DIAGNOSTIC_NO_BOOT_SFX)" >&2; exit 2 ;;
+esac
 WORK="${RG353PS_WORK:-$REPO_ROOT/work/rg353ps}"
 OUT="$WORK/frontends"
 SRC_HOST="$WORK/slot-src"
@@ -46,7 +56,11 @@ IMAGE="${SLOT_BUILD_IMAGE:-slot-66-rg353ps-build:rust-1.96}"
 
 mkdir -p "$OUT" "$WORK/cargo-registry" "$WORK/cargo-git" "$WORK/cargo-target"
 sh "$HERE/stage-upstream-assets.sh" "$WORK" "$ASSET_STAGE"
-sh "$HERE/stage-core-pack.sh" "$WORK" "$ASSET_STAGE/CorePack"
+if [ "$INCLUDE_CORE_PACK" = yes ]; then
+  sh "$HERE/stage-core-pack.sh" "$WORK" "$ASSET_STAGE/CorePack"
+else
+  rm -rf "$ASSET_STAGE/CorePack"
+fi
 rm -rf "$SRC_HOST"
 mkdir -p "$SRC_HOST"
 git -C "$REPO_ROOT" archive --format=tar HEAD | tar -xf - -C "$SRC_HOST"
@@ -64,6 +78,8 @@ docker run --rm --network host --platform linux/arm64 \
   -e "LANGUAGE=$LANGUAGE" \
   -e "PACKAGE_TAG=$PACKAGE_TAG" \
   -e "SLOT_REPO=$SLOT_REPO" \
+  -e "INCLUDE_CORE_PACK=$INCLUDE_CORE_PACK" \
+  -e "DIAGNOSTIC_NO_BOOT_SFX=$DIAGNOSTIC_NO_BOOT_SFX" \
   -e "CARGO_HOME=/usr/local/cargo" \
   -e "CARGO_BUILD_JOBS=2" \
   -v "$SRC_HOST:/slot-up:ro" \
@@ -83,11 +99,27 @@ docker run --rm --network host --platform linux/arm64 \
     LANGUAGE="${LANGUAGE:-zh}"
     PACKAGE_TAG="${PACKAGE_TAG:-test}"
     SLOT_REPO="${SLOT_REPO:-dengzhan007/LUCKLUCK-SLOT-RG353PS}"
+    INCLUDE_CORE_PACK="${INCLUDE_CORE_PACK:-yes}"
+    case "$INCLUDE_CORE_PACK" in
+      yes|no) ;;
+      *) echo "INCLUDE_CORE_PACK must be yes or no" >&2; exit 2 ;;
+    esac
+    DIAGNOSTIC_NO_BOOT_SFX="${DIAGNOSTIC_NO_BOOT_SFX:-no}"
+    case "$DIAGNOSTIC_NO_BOOT_SFX" in
+      yes|no) ;;
+      *) echo "DIAGNOSTIC_NO_BOOT_SFX must be yes or no" >&2; exit 2 ;;
+    esac
     case "$LANGUAGE" in
       zh) FEATURES=device; LANGUAGE_NAME="Simplified Chinese" ;;
       en) FEATURES=device,lang-en; LANGUAGE_NAME="English" ;;
       *) echo "LANGUAGE must be zh or en" >&2; exit 2 ;;
     esac
+    if [ "$DIAGNOSTIC_NO_BOOT_SFX" = yes ]; then
+      FEATURES="$FEATURES,diag-no-boot-sfx"
+      AUDIO_DIAGNOSTIC_NOTE="Sfx::Boot is suppressed at compile time; ALSA device open and all other audio paths are unchanged."
+    else
+      AUDIO_DIAGNOSTIC_NOTE="No audio diagnostic override; normal boot sound and ALSA behavior."
+    fi
 
     rm -rf "$SRC" "$PKG"
     mkdir -p "$SRC" "$PKG"
@@ -163,13 +195,26 @@ docker run --rm --network host --platform linux/arm64 \
       cp -a /upstream-assets/System/boot_opening.slotvid "$PKG/System/"
     fi
     cp /upstream-assets/UPSTREAM-ASSET-SOURCE.txt "$PKG/"
-    # Add the pinned AArch64/musl core pack to the same release tree. This is a
-    # byte-for-byte reuse of the separately validated pack, not a core rebuild.
-    cp -a /upstream-assets/CorePack/System/. "$PKG/System/"
-    cp /upstream-assets/CorePack/CORE-PACK-SOURCE.txt "$PKG/"
-    for core in mgba gpsp fceumm supafaust fbneo genesis_plus_gx pcsx_rearmed pce_fast; do
-      test -s "$PKG/System/${core}_libretro.so"
-    done
+    # Full releases reuse the separately validated core pack. The frontend test
+    # package skips staging and merging it entirely, so no emulator libraries ship.
+    if [ "$INCLUDE_CORE_PACK" = yes ]; then
+      cp -a /upstream-assets/CorePack/System/. "$PKG/System/"
+      cp /upstream-assets/CorePack/CORE-PACK-SOURCE.txt "$PKG/"
+      for core in mgba gpsp fceumm supafaust fbneo genesis_plus_gx pcsx_rearmed pce_fast; do
+        test -s "$PKG/System/${core}_libretro.so"
+      done
+      CORE_PACKAGE_NOTE="The pinned RG353PS AArch64/musl core pack is included; it is reused byte-for-byte and is not rebuilt."
+      CORE_INSTALL_NOTE="The pinned core-pack files update matching System/*_libretro.so and System/lib/ entries; unmatched existing files remain."
+    else
+      CORE_PACKAGE_NOTE="Emulator core libraries and their runtime dependencies are intentionally excluded from this frontend-only package."
+      CORE_INSTALL_NOTE="No emulator cores or System/lib runtime dependencies are included. Merging this package leaves existing core files untouched."
+      if find "$PKG" -type f -name '*_libretro.so' -print -quit | grep -q .; then
+        echo "frontend-only package unexpectedly contains a libretro core" >&2
+        exit 1
+      fi
+      test ! -e "$PKG/CORE-PACK-SOURCE.txt"
+      test ! -d "$PKG/System/lib"
+    fi
 
     # Catch an incomplete distribution package before it reaches the SD card.
     for machine in GBA GB GBC SFC FC NEOGEO ARCADE MD PS1 PCE; do
@@ -204,14 +249,23 @@ credentials, association and DHCP while BaseOS only initializes the radio. The m
 release. That package omits six legacy GB/GBC/GBA theme marks still read by
 this frontend; only those six type_*.png files are supplemented from the
 checksum-pinned upstream v2026.10.02 package. No 720-layout art is imported.
-It does NOT contain or rebuild libretro emulator core libraries.
+Core contents
+-------------
+$CORE_PACKAGE_NOTE
+
+Audio diagnostic
+----------------
+$AUDIO_DIAGNOSTIC_NOTE
+The PCM device is still opened normally before frontend initialization. This test
+does not change ALSA configuration, mixer controls, volume, amplifier timing, or
+the boot-opening video audio.
 
 Install
 -------
 Extract this ZIP into the root of the same user-data partition that contains
 your Games and System directories. Merge the directories. Back up saves first.
-Existing System/*_libretro.so files are not deleted or replaced. The package
-replaces System/slot and installs Slot adapter and default UI asset files.
+Core handling: $CORE_INSTALL_NOTE
+The package replaces System/slot and installs Slot adapter and default UI asset files.
 Before updating an existing customised card, back up System/Carts/, System/fonts/, Overlay/,
 Bootlogos/ and Music/Fonts/; matching paths in the package may overwrite them.
 
@@ -238,7 +292,8 @@ Target: aarch64-unknown-linux-musl
 Panel: 640x480
 Build mode: release / features $FEATURES
 Language: $LANGUAGE ($LANGUAGE_NAME)
-Emulator cores: not built or included
+Emulator cores: $CORE_PACKAGE_NOTE
+Audio diagnostic: $AUDIO_DIAGNOSTIC_NOTE
 Primary UI artwork: RetroGame66/LUCKLUCK-SLOT v2026.11.09 640x480
 Primary UI artwork SHA-256: 5f71f6b8f6fd1c6c4787158b1ccda7740f7b1d68b9b76948d14b71b3ed670c35
 Legacy theme marks: RetroGame66/LUCKLUCK-SLOT v2026.10.02 (six type_*.png only)

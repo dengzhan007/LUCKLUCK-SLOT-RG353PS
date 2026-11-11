@@ -165,7 +165,18 @@ jobs:
             *) exit 1 ;;
           esac
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # Replace existing language packages and checksum file in place.
             gh release upload "$tag" release-assets/* --repo "$GITHUB_REPOSITORY" --clobber
+            # Keep the same version while aligning the source tag with the refreshed build.
+            if git tag --force "$tag" "$GITHUB_SHA" >/dev/null 2>&1 && \
+               git push --force origin "refs/tags/$tag"; then
+              echo "Updated $tag to source commit $GITHUB_SHA"
+            else
+              echo "::warning::Could not move the existing source tag; release assets will still be refreshed."
+            fi
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" \
+              --title "LUCKLUCK SLOT RG353PS $tag" \
+              --notes-file RELEASE-v2026.11.09.md
           else
             gh release create "$tag" release-assets/* \
               --repo "$GITHUB_REPOSITORY" \

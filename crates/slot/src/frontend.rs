@@ -19,7 +19,7 @@ use slot_ui::{
     palette_cell_w, palette_name_face, palette_name_h, page_face, photo_face,
     set_clock_hint_face,
     shelf_title_face, shortcut_hint_face, shortcut_row_face, socket_face, sticker_face,
-    title_face, toast_face, wallpaper_face, word_face, CartFace, Icon, PowerChoice,
+    title_face, toast_face, wallpaper_face, wifi_key_face, word_face, CartFace, Icon, PowerChoice,
     Toast, ALERT_PX, BOLT_PX, HUD_ICON_PX, LEGEND, PALETTE_FOOT_PX, SHORTCUT_HINT, SHORTCUT_ROWS,
 };
 
@@ -213,9 +213,15 @@ impl Frontend {
     ///
     /// 为什么不放在 `Session::boot` 里：那个函数被几十个测试反复调用，每次都会往 ring 里
     /// 塞一秒音频，把所有"环里只有这一条"的断言搅乱。放这里，测试永远碰不到。
+    #[cfg(not(feature = "diag-no-boot-sfx"))]
     pub fn play_boot_sound(&mut self) {
         self.session.play_sfx(crate::audio::Sfx::Boot);
     }
+
+    /// Diagnostic build: intentionally omit only the Slot boot chime. The ALSA sink is
+    /// opened by device_app before Frontend boot and is left completely unchanged.
+    #[cfg(feature = "diag-no-boot-sfx")]
+    pub fn play_boot_sound(&mut self) {}
 
     /// 上电第二屏把逐帧 PCM 直接喂进 ring，需要拿到 Session 拥有的音频句柄。
     pub fn audio_ring(&self) -> std::sync::Arc<crate::audio::Ring> {
@@ -782,7 +788,7 @@ impl Frontend {
         let wifi_glyphs: Vec<(char, TexId, u32, u32)> = glyph_chars
             .chars()
             .map(|c| {
-                let f = word_face(&c.to_string());
+                let f = wifi_key_face(c);
                 (c, compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h)
             })
             .collect();

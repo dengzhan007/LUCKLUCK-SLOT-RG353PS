@@ -7,6 +7,11 @@ Target: Anbernic RG353PS / RK3566 / native 640×480 / BaseOS 1.2.8.
 
 这是基于上游 LUCKLUCK SLOT `v2026.11.09` 的 RG353PS / RK3566 原生 640×480 移植版。保留上游 640×480 布局，并针对 BaseOS 与 RG353PS 替换设备显示、输入和启动适配层。本次正式包同时包含前端和已验证 ABI 的模拟器核心，不再要求用户另行下载核心包。
 
+### 本次 RG353PS 修复（版本号保持不变）
+
+- 修复 Wi-Fi 密码软键盘中小写字母显示成大写的问题。键盘字符现在按原始大小写绘制，不再复用状态栏的大写字形渲染。
+- 已在 RG353PS 真机验证：大小写显示和文本输入均正常。
+
 ### 上游 v2026.11.09 的主要内容
 
 - 十个机种：GBA、GB、GBC、FC、SFC、MD、PS1、PCE、街机和 NEOGEO。
@@ -50,6 +55,11 @@ Target: Anbernic RG353PS / RK3566 / native 640×480 / BaseOS 1.2.8.
 ## English
 
 This is the RG353PS / RK3566 native 640×480 port based on upstream LUCKLUCK SLOT `v2026.11.09`. It retains the upstream 640×480 layout and replaces the H700-specific device display, input, and startup integration with the BaseOS/RG353PS adapter. The complete release packages include both the frontend and the ABI-validated emulator core pack.
+
+### RG353PS fix included in this release refresh
+
+- Fixed the Wi-Fi password keyboard rendering lowercase letters as uppercase. Keyboard glyphs now preserve their original case instead of reusing the uppercase status-bar renderer.
+- Verified on RG353PS hardware: uppercase/lowercase display and text input both work.
 
 ### Upstream v2026.11.09 highlights
 
