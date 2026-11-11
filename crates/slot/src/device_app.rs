@@ -42,11 +42,6 @@ pub fn run() {
     // This boot's startup log, clean. `boot.log` is only written once the frontend exists, so
     // a failure before that would otherwise say nothing anywhere.
     let _ = std::fs::write(root.join("System/boot.err"), "");
-    #[cfg(feature = "diag-no-boot-sfx")]
-    note_startup(
-        &root,
-        "audio_diagnostic: Sfx::Boot suppressed; ALSA sink open path unchanged",
-    );
     let mut surface = match FbdevSurface::new() {
         Ok(s) => s,
         Err(e) => {

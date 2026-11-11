@@ -64,6 +64,7 @@ jobs:
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
           LANGUAGE: zh
+          DISABLE_DEFAULT_BOOT_SFX: "yes"
           PACKAGE_TAG: ${{ steps.version.outputs.package_tag }}
           RG353PS_WORK: ${{ github.workspace }}/work/rg353ps
         run: |
@@ -78,6 +79,7 @@ jobs:
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
           LANGUAGE: en
+          DISABLE_DEFAULT_BOOT_SFX: "yes"
           PACKAGE_TAG: ${{ steps.version.outputs.package_tag }}
           RG353PS_WORK: ${{ github.workspace }}/work/rg353ps
         run: |

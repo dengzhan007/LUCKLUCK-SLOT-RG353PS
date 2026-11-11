@@ -213,14 +213,14 @@ impl Frontend {
     ///
     /// 为什么不放在 `Session::boot` 里：那个函数被几十个测试反复调用，每次都会往 ring 里
     /// 塞一秒音频，把所有"环里只有这一条"的断言搅乱。放这里，测试永远碰不到。
-    #[cfg(not(feature = "diag-no-boot-sfx"))]
+    #[cfg(not(feature = "no-boot-sfx"))]
     pub fn play_boot_sound(&mut self) {
         self.session.play_sfx(crate::audio::Sfx::Boot);
     }
 
-    /// Diagnostic build: intentionally omit only the Slot boot chime. The ALSA sink is
-    /// opened by device_app before Frontend boot and is left completely unchanged.
-    #[cfg(feature = "diag-no-boot-sfx")]
+    /// Release option: omit only the fallback Slot boot chime. The device audio sink and
+    /// ALSA initialization are unchanged; embedded boot-opening audio remains available.
+    #[cfg(feature = "no-boot-sfx")]
     pub fn play_boot_sound(&mut self) {}
 
     /// 上电第二屏把逐帧 PCM 直接喂进 ring，需要拿到 Session 拥有的音频句柄。

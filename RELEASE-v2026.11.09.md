@@ -11,6 +11,8 @@ Target: Anbernic RG353PS / RK3566 / native 640×480 / BaseOS 1.2.8.
 
 - 修复 Wi-Fi 密码软键盘中小写字母显示成大写的问题。键盘字符现在按原始大小写绘制，不再复用状态栏的大写字形渲染。
 - 已在 RG353PS 真机验证：大小写显示和文本输入均正常。
+- 关闭默认启动提示音 `Sfx::Boot`，避免前端进入时再播放额外的默认提示音。
+- `System/boot_opening.slotvid` 中的自定义音轨仍正常播放；已在 RG353PS 真机验证。游戏音效、音乐播放器及 ALSA/PCM 初始化不受影响。
 
 ### 上游 v2026.11.09 的主要内容
 
@@ -60,6 +62,8 @@ This is the RG353PS / RK3566 native 640×480 port based on upstream LUCKLUCK SLO
 
 - Fixed the Wi-Fi password keyboard rendering lowercase letters as uppercase. Keyboard glyphs now preserve their original case instead of reusing the uppercase status-bar renderer.
 - Verified on RG353PS hardware: uppercase/lowercase display and text input both work.
+- Disabled the default `Sfx::Boot` startup chime so the frontend no longer plays the extra fallback sound on entry.
+- Custom audio embedded in `System/boot_opening.slotvid` continues to play; this was verified on RG353PS hardware. Game SFX, the music player, and ALSA/PCM initialization are unchanged.
 
 ### Upstream v2026.11.09 highlights
 

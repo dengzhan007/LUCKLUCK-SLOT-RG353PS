@@ -8,8 +8,8 @@ rust-version.workspace = true
 default = ["host"]
 host = ["dep:winit", "dep:cpal", "dep:gilrs", "slot-gfx/host"]
 device = ["slot-gfx/device"]
-# Diagnostic-only: keep the ALSA sink enabled but suppress the intentional startup chime.
-diag-no-boot-sfx = []
+# Disable only the fallback Slot boot chime; boot-opening, game and music audio remain enabled.
+no-boot-sfx = []
 # Forwarded so one flag switches the whole program: see slot-ui's `lang-en`.
 lang-en = ["slot-ui/lang-en"]
 
