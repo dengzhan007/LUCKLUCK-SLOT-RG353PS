@@ -1868,6 +1868,7 @@ impl Frontend {
         // ★ 2026-10-21：Wi-Fi 配置浮层的面。定句每开一次重烘（便宜，十六句），会变的
         //   两样（当前 SSID、扫描结果）跟着脏标记走；关了整族放走。
         sync_wifi(self.session.app_mut(), compositor);
+        sync_search(self.session.app_mut(), compositor);
         // ★ 2026-10-21：**这一排菜单面按这一局的机种重印。** 开机那一遍是在货架上印的
         //   （空槽读作 GBA），插上 GB/GBC 之后「网格切换」得变成「遮罩切换」—— 不加这一步，
         //   Game Boy 卡上那一行会一直写着它没有的东西。
@@ -3039,6 +3040,36 @@ fn sync_keymap(
         sig: sig.clone(),
     }));
     *built = Some(sig);
+}
+
+/// ★ 2026-11-11：**货架首字母搜索浮层的面。** 四句定句，开时烘、关时整族放走。
+/// 输入串和键帽都用 `wifi_glyphs` 拼，所以这里只有四张纹理，按一次键不重烘任何东西。
+fn sync_search(app: &mut App, compositor: &mut Compositor) {
+    if !app.search_open() {
+        let ids = app
+            .search_faces()
+            .map(|f| [f.title.0, f.hint_grid.0, f.hint_act.0, f.empty.0]);
+        if let Some(ids) = ids {
+            for id in ids {
+                compositor.release_texture(id);
+            }
+            app.set_search_faces(None);
+        }
+        return;
+    }
+    if app.search_faces().is_some() {
+        return;
+    }
+    let mut line = |s: &str| {
+        let f = slot_ui::page_face(s);
+        (compositor.create_texture(f.w, f.h, &f.rgba), f.w, f.h)
+    };
+    app.set_search_faces(Some(crate::app::SearchFaces {
+        title: line(lang::SEARCH_TITLE),
+        hint_grid: line(lang::SEARCH_HINT_GRID),
+        hint_act: line(lang::SEARCH_HINT_ACT),
+        empty: line(lang::SEARCH_EMPTY),
+    }));
 }
 
 /// ★ 2026-10-21：**Wi-Fi 配置浮层的面。** 定句十六句每开一次重烘（`word_face` 一句一张，
