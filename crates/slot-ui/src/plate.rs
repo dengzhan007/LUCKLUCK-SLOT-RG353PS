@@ -233,6 +233,34 @@ pub fn word_face(text: &str) -> UndoFace {
     }
 }
 
+/// One Wi-Fi keyboard cell, rasterised without the uppercase conversion used by
+/// word_face and the rest of the interface's display labels. A keyboard's lower-case and
+/// upper-case layers are distinct input choices, so their glyphs must stay distinct too.
+pub fn wifi_key_face(glyph: char) -> UndoFace {
+    let Some(font) = text::label_font() else {
+        return UndoFace {
+            rgba: vec![0; 4],
+            w: 1,
+            h: 1,
+        };
+    };
+    let value = glyph.to_string();
+    let width = (text::line_width(font, &value, PCT_PX, 0.0).ceil().max(1.0) as u32) + 4;
+    let height = (text::line_height(PCT_PX).ceil().max(1.0) as u32) + 4;
+    let layout = text::Layout {
+        lines: vec![value],
+        px: PCT_PX,
+        tracking: 0.0,
+    };
+    let mut rgba = vec![0u8; (width * height * 4) as usize];
+    text::draw_centred(&mut rgba, width, height, &layout, ink());
+    UndoFace {
+        rgba,
+        w: width,
+        h: height,
+    }
+}
+
 /// The time. Same face and same band as the battery's percent — the two halves of one status row.
 /// ★ 2026-11-03（六六）：「字体有点小」。状态行那档（`word_face`，24px 挤在 20 高的带子里）
 /// 原是给顶栏电池/时钟那个窄仓位定的，Wi-Fi 配置页和直连提示整页挂在它身上就偏小。
@@ -493,4 +521,22 @@ fn glyph_cap(glyph: char) -> Vec<u8> {
         }
     }
     cap
+}
+
+#[cfg(test)]
+mod wifi_key_face_tests {
+    use super::wifi_key_face;
+
+    #[test]
+    fn wifi_key_face_preserves_lowercase_and_uppercase() {
+        let lower = wifi_key_face('a');
+        let upper = wifi_key_face('A');
+
+        assert!(lower.w > 0 && lower.h > 0);
+        assert!(upper.w > 0 && upper.h > 0);
+        assert_ne!(
+            lower.rgba, upper.rgba,
+            "the keyboard's lowercase and uppercase layers must render different glyphs"
+        );
+    }
 }
