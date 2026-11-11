@@ -43,6 +43,11 @@ case "$INCLUDE_CORE_PACK" in
   yes|no) ;;
   *) echo "INCLUDE_CORE_PACK must be yes or no (got: $INCLUDE_CORE_PACK)" >&2; exit 2 ;;
 esac
+DIAGNOSTIC_NO_BOOT_SFX="${DIAGNOSTIC_NO_BOOT_SFX:-no}"
+case "$DIAGNOSTIC_NO_BOOT_SFX" in
+  yes|no) ;;
+  *) echo "DIAGNOSTIC_NO_BOOT_SFX must be yes or no (got: $DIAGNOSTIC_NO_BOOT_SFX)" >&2; exit 2 ;;
+esac
 WORK="${RG353PS_WORK:-$REPO_ROOT/work/rg353ps}"
 OUT="$WORK/frontends"
 SRC_HOST="$WORK/slot-src"
@@ -74,6 +79,7 @@ docker run --rm --network host --platform linux/arm64 \
   -e "PACKAGE_TAG=$PACKAGE_TAG" \
   -e "SLOT_REPO=$SLOT_REPO" \
   -e "INCLUDE_CORE_PACK=$INCLUDE_CORE_PACK" \
+  -e "DIAGNOSTIC_NO_BOOT_SFX=$DIAGNOSTIC_NO_BOOT_SFX" \
   -e "CARGO_HOME=/usr/local/cargo" \
   -e "CARGO_BUILD_JOBS=2" \
   -v "$SRC_HOST:/slot-up:ro" \
@@ -98,11 +104,22 @@ docker run --rm --network host --platform linux/arm64 \
       yes|no) ;;
       *) echo "INCLUDE_CORE_PACK must be yes or no" >&2; exit 2 ;;
     esac
+    DIAGNOSTIC_NO_BOOT_SFX="${DIAGNOSTIC_NO_BOOT_SFX:-no}"
+    case "$DIAGNOSTIC_NO_BOOT_SFX" in
+      yes|no) ;;
+      *) echo "DIAGNOSTIC_NO_BOOT_SFX must be yes or no" >&2; exit 2 ;;
+    esac
     case "$LANGUAGE" in
       zh) FEATURES=device; LANGUAGE_NAME="Simplified Chinese" ;;
       en) FEATURES=device,lang-en; LANGUAGE_NAME="English" ;;
       *) echo "LANGUAGE must be zh or en" >&2; exit 2 ;;
     esac
+    if [ "$DIAGNOSTIC_NO_BOOT_SFX" = yes ]; then
+      FEATURES="$FEATURES,diag-no-boot-sfx"
+      AUDIO_DIAGNOSTIC_NOTE="Sfx::Boot is suppressed at compile time; ALSA device open and all other audio paths are unchanged."
+    else
+      AUDIO_DIAGNOSTIC_NOTE="No audio diagnostic override; normal boot sound and ALSA behavior."
+    fi
 
     rm -rf "$SRC" "$PKG"
     mkdir -p "$SRC" "$PKG"
@@ -236,6 +253,13 @@ Core contents
 -------------
 $CORE_PACKAGE_NOTE
 
+Audio diagnostic
+----------------
+$AUDIO_DIAGNOSTIC_NOTE
+The PCM device is still opened normally before frontend initialization. This test
+does not change ALSA configuration, mixer controls, volume, amplifier timing, or
+the boot-opening video audio.
+
 Install
 -------
 Extract this ZIP into the root of the same user-data partition that contains
@@ -269,6 +293,7 @@ Panel: 640x480
 Build mode: release / features $FEATURES
 Language: $LANGUAGE ($LANGUAGE_NAME)
 Emulator cores: $CORE_PACKAGE_NOTE
+Audio diagnostic: $AUDIO_DIAGNOSTIC_NOTE
 Primary UI artwork: RetroGame66/LUCKLUCK-SLOT v2026.11.09 640x480
 Primary UI artwork SHA-256: 5f71f6b8f6fd1c6c4787158b1ccda7740f7b1d68b9b76948d14b71b3ed670c35
 Legacy theme marks: RetroGame66/LUCKLUCK-SLOT v2026.10.02 (six type_*.png only)
