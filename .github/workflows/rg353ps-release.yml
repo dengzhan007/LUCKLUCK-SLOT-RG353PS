@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "rg353ps-v*"
+    branches:
+      - "release/rg353ps-v2026.11.11"
 
 permissions:
   contents: write
@@ -11,6 +13,9 @@ permissions:
 concurrency:
   group: rg353ps-native-640-release-${{ github.ref }}
   cancel-in-progress: false
+
+env:
+  RG353PS_RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || 'rg353ps-v2026.11.11' }}
 
 jobs:
   build:
@@ -31,7 +36,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dengzhan007/BaseOS-RG353PS
-          ref: 4353f0bcee34c3f9411c0399e370aa010901a765
+          ref: 9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7
           path: baseos
 
       - name: Validate native 640 tree
@@ -56,12 +61,12 @@ jobs:
       - name: Build language-specific release ZIP
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
-          BASEOS_REF: 4353f0bcee34c3f9411c0399e370aa010901a765
+          BASEOS_REF: 9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7
           SLOT_REV: ${{ github.sha }}
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
           LANGUAGE: ${{ matrix.language }}
-          PACKAGE_TAG: ${{ github.ref_name }}
+          PACKAGE_TAG: ${{ env.RG353PS_RELEASE_TAG }}
           DIAGNOSTIC_NO_BOOT_SFX: "yes"
           RG353PS_WORK: ${{ github.workspace }}/slot/work/rg353ps
         run: sh slot/packaging/rg353ps/build.sh
@@ -71,8 +76,8 @@ jobs:
         with:
           name: rg353ps-native-640-${{ matrix.language }}
           path: |
-            slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-${{ github.ref_name }}-${{ matrix.language }}.zip
-            slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-${{ github.ref_name }}-${{ matrix.language }}.zip.sha256
+            slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-${{ env.RG353PS_RELEASE_TAG }}-${{ matrix.language }}.zip
+            slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-${{ env.RG353PS_RELEASE_TAG }}-${{ matrix.language }}.zip.sha256
           if-no-files-found: error
           retention-days: 2
 
@@ -93,71 +98,67 @@ jobs:
         run: |
           set -euo pipefail
           ls -lh release-assets/
-          test -f release-assets/LUCKLUCK-SLOT-RG353PS-640x480-${GITHUB_REF_NAME}-zh.zip
-          test -f release-assets/LUCKLUCK-SLOT-RG353PS-640x480-${GITHUB_REF_NAME}-en.zip
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+          test -f release-assets/LUCKLUCK-SLOT-RG353PS-640x480-${RG353PS_RELEASE_TAG}-zh.zip
+          test -f release-assets/LUCKLUCK-SLOT-RG353PS-640x480-${RG353PS_RELEASE_TAG}-en.zip
+          if gh release view "${RG353PS_RELEASE_TAG}" >/dev/null 2>&1; then
             echo "Release already exists; refusing to overwrite published assets."
             exit 1
           fi
           cat > release-notes.md <<'NOTES'
 # LUCKLUCK SLOT — RG353PS native 640×480
 
-This RG353PS port follows upstream LUCKLUCK SLOT **v2026.11.09**.
+This RG353PS port follows upstream LUCKLUCK SLOT **v2026.11.11** (source commit `25e39ec7131ac05fc5187181c4de77d75bedad7c`).
 
 ## 简体中文
 
-### 上游 v2026.11.09
-- 支持 GBA、GB、GBC、FC、SFC、MD、PS1、PCE、街机和 NEOGEO。
-- 包含像素随身听、设置界面、存档槽位与即时存档浏览器、金手指和按键重映射。
-- 提供按机种配置的显示遮罩、扫描线、色彩校正，以及主题、壁纸、卡带美术和开机画面。
-- 修复跨机种同名游戏识别错误、音乐播放器启动后无法进入等问题。
-- PS1 大镜像采用路径流式加载，降低内存占用。
+### 上游 v2026.11.11
+- 支持 GBA、GB、GBC、FC、SFC、MD、PS1、PCE、街机和 NEOGEO，以及像素随身听、设置、存档槽位、即时存档浏览器、金手指和按键重映射。
+- **游戏首字母搜索：** 在游戏货架按 `SELECT + Y` 打开四层键盘，支持拼音首字母和游戏名原文片段实时筛选；方向键移动、`A` 输入、`B` 退格、`L1/R1` 换层；`X` 恢复全部、`START` 应用、`MENU` 取消。仅作用于游戏货架，不改变音乐/碟片货架。
+- **修复 B 键短按误触发 Wi-Fi 直连：** 松开 B 时清除长按跟踪状态；长按 B 的直连功能保留。
+- **键盘大小写显示：** Wi-Fi 密码键帽按原始字符绘制，保留小写/大写字形。
 
-### RG353PS 移植与修复
-- 原生 640×480 布局，基于上游 `66-mods-640`，不是将 720×480 画面缩放适配。
-- 使用 BaseOS SDL2/KMSDRM + GLES2 显示后端，适配 RK3566 Panfrost。
-- 集成 BaseOS 前端适配器、`manifest.conf`、启动脚本及音量/电源所有权约定。
-- 使用 RG353PS 实测按键映射和摇杆参数。
-- 适配 RG353PS Wi-Fi、休眠与唤醒流程。
-- 将 HUD 字体解析移至后台线程，减少首次绘制时的卡顿。
-- 修复 Wi-Fi 密码软键盘小写字母显示为大写的问题。
-- 关闭前端默认 `Sfx::Boot` 启动提示音；自定义 `System/boot_opening.slotvid` 音轨、游戏音效和音乐播放不受影响。
+### RG353PS / BaseOS 移植
+- 原生 640×480 逻辑画布与布局，基于上游 640 源码树，不缩放 720×480 画面。
+- BaseOS SDL2/KMSDRM + GLES2 显示后端，运行于 RK3566 Panfrost。
+- 集成 RG353PS BaseOS 前端适配器、`manifest.conf`、启动脚本、MTP 辅助钩子，以及音量/电源所有权约定。
+- 保留 RG353PS 实测按键映射、四轴摇杆参数、Wi-Fi、休眠/唤醒适配；HUD 字体后台解析。
+- 完整包包含固定版本的 AArch64/musl 模拟器核心、运行库、许可证和源码材料。
+- 正式包关闭前端默认 `Sfx::Boot` 提示音。此设置只抑制前端启动提示音，不关闭 ALSA、游戏音效或音乐，也不代表 BaseOS 开机画面阶段的功放上电噪声已解决。
 
-### 下载与安装
-- `*-zh.zip`：简体中文完整包；`*-en.zip`：英文完整包。
-- 对应 `.sha256` 文件用于校验下载完整性。
-- 两个语言包均包含前端资源及固定版本的 RG353PS AArch64/musl 模拟器核心。解压后将目录合并到 BaseOS 数据分区根目录。更新前请备份存档和自定义资源。
+### 资源与安装
+- `*-zh.zip`：简体中文完整包；`*-en.zip`：英文完整包；各自提供 `.sha256` 校验文件。
+- 将解压目录合并到 BaseOS 数据分区根目录；更新前备份存档和自定义资源。
+- 为保证可复现构建，当前美术、字体、音乐、遮罩、开机图和网络脚本资源继续使用 SHA-256 固定的上游 v2026.11.09 数据包；前端可执行文件由 v2026.11.11 对应的 RG353PS 源码构建，不复制上游设备二进制。
 
 ## English
 
-### Upstream v2026.11.09
-- Supports GBA, GB, GBC, FC, SFC, MD, PS1, PCE, Arcade and Neo Geo.
-- Includes the pixel music player, settings, save slots and save-state browser, cheats and button remapping.
-- Per-system display masks, scanlines and colour correction, plus themes, wallpapers, cartridge art and boot logos.
-- Fixes cross-system duplicate game-name resolution and the music-player startup issue.
-- Streams large PS1 images by path to reduce memory use.
+### Upstream v2026.11.11
+- Supports GBA, GB, GBC, FC, SFC, MD, PS1, PCE, Arcade and Neo Geo, plus the music player, settings, save slots, save-state browser, cheats and button remapping.
+- **Shelf search by initials:** press `SELECT + Y` on the game shelf to open the four-layer keyboard. Search by pinyin initials or a literal title substring; D-pad moves, `A` types, `B` erases and `L1/R1` changes layers. `X` restores all games, `START` applies and `MENU` cancels. The disc/music shelf is unchanged.
+- **Short B press fix:** releasing B clears the long-press tracker, so a tap no longer opens Wi-Fi direct connect; holding B still invokes direct connect.
+- **Keyboard case rendering:** Wi-Fi password keycaps are rasterized from the original character, preserving lowercase and uppercase glyphs.
 
-### RG353PS port changes
-- Native 640×480 layout based on upstream `66-mods-640`, not a scaled 720×480 build.
-- BaseOS SDL2/KMSDRM + GLES2 display backend for RK3566 Panfrost.
-- BaseOS frontend adapter, `manifest.conf`, launcher, and volume/power ownership integration.
-- RG353PS-tested button mapping and joystick parameters.
-- RG353PS Wi-Fi and suspend/resume integration.
-- HUD font parsing moved to a background thread to reduce first-frame stalls.
-- Fixed lowercase letters rendering as uppercase in the Wi-Fi password keyboard.
-- Disabled the default `Sfx::Boot` frontend startup chime. Custom `System/boot_opening.slotvid` audio, game effects and music playback remain enabled.
+### RG353PS / BaseOS port
+- Native 640×480 logical canvas and layout based on the upstream 640 source tree; not a scaled 720×480 build.
+- BaseOS SDL2/KMSDRM + GLES2 display backend on RK3566 Panfrost.
+- RG353PS BaseOS frontend adapter, `manifest.conf`, launcher, MTP helper hook, and volume/power ownership integration.
+- RG353PS-tested button mapping, four-axis joystick parameters, Wi-Fi and suspend/resume integration; HUD font parsing moved to a background worker.
+- Full packages include the pinned AArch64/musl emulator cores, runtime libraries, licence notices and source materials.
+- The release build disables the frontend's default `Sfx::Boot` cue only. ALSA, game effects and music remain enabled. This does not claim to fix the separate amplifier power-on noise during the BaseOS boot screen.
 
-### Downloads and installation
-- `*-zh.zip`: Simplified Chinese full package; `*-en.zip`: English full package.
-- Matching `.sha256` files are provided for integrity verification.
-- Both packages include frontend assets and the pinned RG353PS AArch64/musl emulator core pack. Merge extracted directories into the BaseOS data-partition root. Back up saves and customised assets before updating.
+### Assets and installation
+- `*-zh.zip`: Simplified Chinese full package; `*-en.zip`: English full package. SHA-256 sidecars are provided.
+- Merge extracted directories into the BaseOS data-partition root. Back up saves and customised assets before updating.
+- For reproducible packaging, artwork, fonts, music, overlays, boot logos and the network helper remain pinned to the checksum-verified upstream v2026.11.09 data archive. The frontend executable is built from the RG353PS source synced to v2026.11.11; no upstream device binary is copied.
 
 ### Validation
-CI confirms build and package integrity; it does not mean every system and game has completed hardware gameplay validation. This is an RG353PS community port, not an official upstream hardware-support claim.
+CI verifies the Chinese and English AArch64/musl builds, package contents and SHA-256 files. Earlier Chinese core-free test packages built successfully from the v2026.11.11 port commit and its boot-cue diagnostic follow-up; this full bilingual release build is a separate CI validation. CI success does not mean every system/game has completed hardware gameplay testing. The BaseOS boot-screen amplifier transient remains a separate hardware issue.
 
-Upstream source and full history: https://github.com/RetroGame66/LUCKLUCK-SLOT/releases/tag/v2026.11.09
+This is a community RG353PS port and is not an official upstream hardware-support claim.
+
+Upstream release: https://github.com/RetroGame66/LUCKLUCK-SLOT/releases/tag/v2026.11.11
 NOTES
-          gh release create "${GITHUB_REF_NAME}" release-assets/*.zip release-assets/*.sha256 \
-            --title "LUCKLUCK SLOT RG353PS 640×480 ${GITHUB_REF_NAME}" \
+          gh release create "${RG353PS_RELEASE_TAG}" release-assets/*.zip release-assets/*.sha256 \
+            --title "LUCKLUCK SLOT RG353PS 640×480 ${RG353PS_RELEASE_TAG}" \
             --notes-file release-notes.md \
             --target "${GITHUB_SHA}"
