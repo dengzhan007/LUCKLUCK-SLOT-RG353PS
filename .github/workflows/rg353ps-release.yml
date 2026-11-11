@@ -157,6 +157,7 @@ jobs:
           Upstream release: https://github.com/RetroGame66/LUCKLUCK-SLOT/releases/tag/v2026.11.11
           NOTES
           gh release create "${RG353PS_RELEASE_TAG}" release-assets/*.zip release-assets/*.sha256 \
+            --repo "dengzhan007/LUCKLUCK-SLOT-RG353PS" \
             --title "LUCKLUCK SLOT RG353PS 640×480 ${RG353PS_RELEASE_TAG}" \
             --notes-file release-notes.md \
             --target "${GITHUB_SHA}"
