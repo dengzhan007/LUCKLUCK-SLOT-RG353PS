@@ -83,3 +83,11 @@ Merge extracted directories into the BaseOS data-partition root. Back up saves a
 - This is a community RG353PS port, not an official upstream support claim.
 
 Upstream release: <https://github.com/RetroGame66/LUCKLUCK-SLOT/releases/tag/v2026.11.11>
+
+
+## Build provenance
+
+- Release source: upstream LUCKLUCK SLOT v2026.11.11, ported in this repository.
+- BaseOS device adapter pinned for this build: [`9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7`](https://github.com/dengzhan007/BaseOS-RG353PS/commit/9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7), the adapter revision used by the successful RG353PS frontend test build.
+- Static UI asset bundle remains pinned to upstream v2026.11.09 with its SHA-256 recorded in `packaging/rg353ps/stage-upstream-assets.sh`.
+- The release workflow creates the `rg353ps-v2026.11.11` tag at the exact source commit used for the paired Chinese and English packages.
