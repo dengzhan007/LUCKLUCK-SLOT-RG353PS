@@ -174,7 +174,7 @@ docker run --rm --network host --platform linux/arm64 \
     sh -n "$FRONTEND_PACKAGE/launch.sh"
     grep -Fqx "package_api=1" "$FRONTEND_PACKAGE/baseos-frontend.conf"
     test -s "$FRONTEND_PACKAGE/profiles/640-native.conf"
-    PROFILE_COUNT="$(find "$FRONTEND_PACKAGE/profiles" -maxdepth 1 -type f -name "*.conf" | wc -l | tr -d ' ')"
+    PROFILE_COUNT="$(find "$FRONTEND_PACKAGE/profiles" -maxdepth 1 -type f -name "*.conf" | wc -l | tr -d " ")"
     [ "$PROFILE_COUNT" = 1 ] || {
       echo "expected one default Slot profile, found $PROFILE_COUNT" >&2
       exit 1
