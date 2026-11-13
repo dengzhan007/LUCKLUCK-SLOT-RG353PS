@@ -348,13 +348,31 @@ impl Default for SlotState {
     }
 }
 
+/// Mutable frontend state belongs in the writable per-instance user-data
+/// directory, not in System/. Managed BaseOS profiles bind-mount .userdata as
+/// a directory; atomic rename is safe there. Binding a single file at
+/// System/slot.state is not safe because atomic_write replaces the file by
+/// renaming a sibling temporary file over the mount point (Linux rejects that
+/// with EBUSY).
 fn state_path(root: &Path) -> PathBuf {
+    root.join(".userdata").join("slot.state")
+}
+
+/// Pre-profile releases stored this file below System/. Read it as a one-way
+/// migration fallback so existing cards keep their settings on first launch.
+fn legacy_state_path(root: &Path) -> PathBuf {
     root.join("System").join("slot.state")
 }
 
 pub fn read_slot_state(root: &Path) -> SlotState {
-    std::fs::read(state_path(root))
-        .ok()
+    let bytes = match std::fs::read(state_path(root)) {
+        Ok(bytes) => Some(bytes),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            std::fs::read(legacy_state_path(root)).ok()
+        }
+        Err(_) => None,
+    };
+    bytes
         .and_then(|b| String::from_utf8(b).ok())
         .and_then(|s| parse(&s))
         .unwrap_or_default()
@@ -420,7 +438,11 @@ pub fn write_slot_state(root: &Path, s: &SlotState) -> std::io::Result<()> {
             text.push('\n');
         }
     }
-    atomic_write(&state_path(root), text.as_bytes())
+    let path = state_path(root);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    atomic_write(&path, text.as_bytes())
 }
 
 /// All or nothing. A file we only half recognise is not one we wrote, and inheriting the
