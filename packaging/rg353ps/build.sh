@@ -269,22 +269,44 @@ the boot-opening video audio.
 
 Install
 -------
-Extract the ZIP into the DATA partition Frontends/ directory. Do not
-merge the package into the DATA root and do not move individual files.
-BaseOS registers both 640-native and 640-native-alt configurations
-automatically. They share the Slot executable and Games/ ROM library,
-and battery saves under Saves/. Each profile keeps its own .userdata/
-(including atomic-safe slot.state and selected_core.ini records for
-favorites, time zone, frontend preferences and per-game core choices), mutable
-System settings and States/ save-state snapshots. Back up Saves/ first.
-Core handling: $CORE_INSTALL_NOTE
-The package contains its own payload/System/slot and UI resources. The launcher
-bind-mounts the shared DATA-root Games/ and Saves/ directories, while
-.userdata, mutable System preferences and States/ are stored under the
-selected BaseOS profile instance. Existing shared cores in the DATA-root
-System/ directory are exposed to the profile when present.
+Requires RG353PS BaseOS 1.2.10 or newer (managed package/profile API 1).
+Extract the ZIP so the one top-level slot-rg353ps/ directory is directly
+inside DATA/Frontends/. Do not merge its contents into the DATA root.
+BaseOS discovers both 640-native and 640-native-alt profiles automatically.
 
-Back up customised UI resources before replacing this package.
+Hold L1 or R1 while powering on to open the frontend selector (Function USB
+storage keeps priority). The top line names the current default startup and
+the matching profile row is marked [DEFAULT]; AUTO means BaseOS will choose
+by discovery priority. A launches the highlighted profile once without
+changing the default. START saves it as the default and launches it. B
+cancels and continues with the saved default.
+
+Y removes only the selected profile. X uninstalls the whole Slot package.
+Both actions require confirmation. Removing the last profile or the whole
+package deletes Frontends/slot-rg353ps/, but does not delete per-profile data
+under .baseos/instances/, Games/, Saves/ or shared core data. Reinstalling
+the same package/profile IDs reuses the saved profile settings and states.
+Keep the package ID and profile file names unchanged when you want to retain
+those profiles' existing data.
+
+Data ownership
+--------------
+Shared by all profiles: Games/ ROMs, battery saves under Saves/, and the
+emulator core files exposed from the shared package/core location.
+Private to each profile: .userdata/ (including slot.state and
+selected_core.ini), mutable System preferences, favorites, time zone,
+per-game core selections and States/ save-state snapshots. Thus the two
+profiles use the same executable and core files but do not share their
+preferences, core choices or save-state snapshots.
+
+Core handling: $CORE_INSTALL_NOTE
+The frontend test ZIP is intentionally core-free. A full release package
+may include the pinned core pack. The launcher also exposes existing shared
+cores when they are installed in the supported shared locations.
+
+Back up customised UI resources before replacing this package. Do not delete
+/mnt/SDCARD/.baseos/instances/ when removing or reinstalling the frontend;
+those directories are the persistent profile data.
 
 Resolution
 ----------
@@ -294,9 +316,12 @@ frame geometry and UI layout come from upstream branch 66-mods-640. The RG353PS
 BaseOS build replaces only the device surface with the SDL2/KMSDRM + GLES2
 adapter; it does not use the upstream H700 Mali/EGL framebuffer backend.
 
-This is a first integration build, not a hardware-validated release. Verify
-boot-to-frontend, screen geometry, button mapping, audio, sleep/wake and game
-launch separately. A successful compile does not prove hardware operation.
+The RG353PS BaseOS package/profile lifecycle is hardware-validated for
+selector entry/exit, independent profile settings and save states, shared
+Games/Saves/core resources, independent core choices, default versus
+temporary launch, profile/package uninstall, and reinstall with retained
+profile data. This does not claim exhaustive compatibility for every
+emulator core or every game title.
 EOF
 
     cat > "$FRONTEND_PACKAGE/BUILD-INFO.txt" <<EOF
