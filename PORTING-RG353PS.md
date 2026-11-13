@@ -29,16 +29,16 @@ The upstream device backend in `crates/slot-gfx/src/fbdev.rs` is replaced at bui
 Despite the legacy filename, this adapter uses SDL2 KMSDRM and OpenGL ES 2.0 through Panfrost. It is not the H700 proprietary Mali/EGL fbdev implementation. The adapter keeps the `FbdevSurface` interface consumed by `device_app.rs`, so the upstream 640 compositor is unchanged.
 
 The distribution is a BaseOS managed package, not a legacy `manifest.conf` adapter. It is installed under
-`Frontends/slot-rg353ps/` and contains:
+`Frontends/LUCKLUCK-SLOT/` and contains:
 - `baseos-frontend.conf` with `package_api=1` (package-wide metadata and ownership).
 - `profiles/640-native.conf` with `profile_api=1` (the only profile shipped by default).
 - One `launch.sh` and one shared `payload/` containing the RG353PS Slot binary and UI resources.
 
 Managed package/profile support requires RG353PS BaseOS **1.2.10 or newer**. The IDs are stable:
-`slot-rg353ps` is the package ID and `640-native` is the default profile ID. Users may add more profile IDs by copying the profile config file and assigning a new filename/display name.
+`LUCKLUCK-SLOT` is the package ID and `640-native` is the default profile ID. Users may add more profile IDs by copying the profile config file and assigning a new filename/display name.
 BaseOS combines them into independent runtime identities such as
-`slot-rg353ps--640-native`. Creating another profile file creates a corresponding
-`slot-rg353ps--<new-profile-id>` runtime identity and a new persistent instance
+`LUCKLUCK-SLOT--640-native`. Creating another profile file creates a corresponding
+`LUCKLUCK-SLOT--<new-profile-id>` runtime identity and a new persistent instance
 directory. Metadata files are plain `key=value` data; never source or evaluate
 them as shell scripts.
 
@@ -77,7 +77,7 @@ atomic-write targets. Legacy `System/slot.state`, `System/library.cache`
 and `System/selected_core.ini` remain read fallbacks for migration.
 
 Uninstalling a profile removes only its profile metadata. Uninstalling the
-package removes `Frontends/slot-rg353ps/`. Neither operation deletes
+package removes `Frontends/LUCKLUCK-SLOT/`. Neither operation deletes
 `.baseos/instances/`, shared `Games/`, `Saves/` or shared core data.
 Reinstalling the same package ID and profile IDs must reuse the same instance
 directories. Do not change IDs casually: changing an ID creates a new profile
