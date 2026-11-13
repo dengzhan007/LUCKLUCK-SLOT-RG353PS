@@ -1,6 +1,16 @@
 name: RG353PS native 640 frontend test (Chinese)
 
 on:
+  pull_request:
+    branches:
+      - port/rg353ps-640-native
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "packaging/rg353ps/**"
+      - ".github/workflows/rg353ps-package.yml"
   push:
     branches:
       - port/rg353ps-640-native
@@ -17,7 +27,7 @@ on:
       baseos_ref:
         description: "BaseOS-RG353PS ref used for the device adapter"
         required: true
-        default: "9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7"
+        default: "fb9ebe11e6f96d98c85a5e2368a4d3b87d45e3a8"
 
 permissions:
   contents: read
@@ -41,7 +51,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dengzhan007/BaseOS-RG353PS
-          ref: ${{ inputs.baseos_ref || '9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7' }}
+          ref: ${{ inputs.baseos_ref || 'fb9ebe11e6f96d98c85a5e2368a4d3b87d45e3a8' }}
           path: baseos
 
       - name: Validate native 640 tree and BaseOS adapter
@@ -68,7 +78,8 @@ jobs:
           grep -Fq 'all_four_rg353ps_axes_use_the_upstream_slot_stick_directions' /tmp/evdev-rg353ps-check.rs
           grep -Fq '0x13c => Btn::Menu, // Function' /tmp/evdev-rg353ps-check.rs
           test -f baseos/platforms/rg353ps/frontends/slot/launch.sh
-          test -f baseos/platforms/rg353ps/frontends/slot/manifest.conf
+          test -f baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          test -f baseos/platforms/rg353ps/frontends/slot/profiles/640-native.conf
           sh -n baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
           grep -Fq 'modprobe rtw88_8821cs' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
           grep -Fq 'rfkill_dev in /sys/class/rfkill/rfkill*' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
@@ -76,17 +87,32 @@ jobs:
           grep -Fq 'ip link set wlan0 up' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
           sh -n baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
           grep -Fq 'System/slotnet.sh' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
-          grep -Fqx 'export AGS_ROOT="$SDCARD"' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'AGS_ROOT=$SLOT_ROOT' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'mount --bind "$SDCARD/Games" "$SLOT_ROOT/Games"' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'mount --bind "$SDCARD/Saves" "$SLOT_ROOT/Saves"' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'for state_name in slot.state theme.txt' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'mount --bind "$PROFILE_STATES_DIR" "$SLOT_ROOT/States"' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'root.join(".userdata").join("slot.state")' slot/crates/slot-store/src/slot_state.rs
+          grep -Fq 'const SELECTED_CORE_FILE: &str = ".userdata/selected_core.ini";' slot/crates/slot-store/src/core.rs
+          grep -Fq 'const CACHE: &str = ".userdata/library.cache";' slot/crates/slot-store/src/scan.rs
+          grep -Fq 'cargo test -p slot-store' slot/packaging/rg353ps/build.sh
+          grep -Fq 'slot-userdata-seeded' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'export AGS_NET_MODULE=rtw88_8821cs' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fq 'AGS_ROOT="$FRONTEND_ROOT" "$FRONTEND_WIFI" down' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
           grep -Fq 'AGS_ROOT="$FRONTEND_ROOT" "$FRONTEND_WIFI" up' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
           ! grep -Fq 'BASEOS_WIFI' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'export BASEOS_SLEEP=/usr/sbin/rg353ps-sleep' baseos/platforms/rg353ps/frontends/slot/launch.sh
-          grep -Fqx 'adapter_api=1' baseos/platforms/rg353ps/frontends/slot/manifest.conf
-          grep -Fqx 'volume_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
-          grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
+          grep -Fqx 'package_api=1' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          grep -Fqx 'volume_owner=frontend' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          grep -Fqx 'profile_api=1' baseos/platforms/rg353ps/frontends/slot/profiles/640-native.conf
+          grep -Fqx 'display_name=LUCKLUCK-SLOT' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          grep -Fqx 'previous_package_id=slot-rg353ps' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          grep -Fqx 'display_name=LUCKLUCK-SLOT' baseos/platforms/rg353ps/frontends/slot/profiles/640-native.conf
+          test "$(find baseos/platforms/rg353ps/frontends/slot/profiles -maxdepth 1 -type f -name '*.conf' | wc -l | tr -d ' ')" = 1
           grep -Fqx '# baseos: volume-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx '# baseos: power-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          sh -n baseos/platforms/rg353ps/frontends/slot/launch.sh
           sh -n slot/packaging/rg353ps/build.sh
           sh -n slot/packaging/rg353ps/stage-upstream-assets.sh
           sh -n slot/packaging/rg353ps/stage-core-pack.sh
@@ -102,54 +128,100 @@ jobs:
           restore-keys: |
             rg353ps-native-640-cargo-${{ runner.os }}-
 
-      - name: Build Chinese core-free frontend test ZIP only
+      - name: Build Chinese frontend integration ZIP with pinned emulator cores
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
-          BASEOS_REF: ${{ inputs.baseos_ref || '9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7' }}
+          BASEOS_REF: ${{ inputs.baseos_ref || 'fb9ebe11e6f96d98c85a5e2368a4d3b87d45e3a8' }}
           SLOT_REV: ${{ github.sha }}
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
           LANGUAGE: zh
-          INCLUDE_CORE_PACK: "no"
+          INCLUDE_CORE_PACK: "yes"
           DIAGNOSTIC_NO_BOOT_SFX: "yes"
-          PACKAGE_TAG: test-${{ github.run_number }}
+          PACKAGE_TAG: integration-${{ github.run_number }}
           RG353PS_WORK: ${{ github.workspace }}/slot/work/rg353ps
         run: sh slot/packaging/rg353ps/build.sh
 
-      - name: Verify test ZIP excludes emulator cores
+      - name: Verify integration ZIP contains the pinned emulator core pack
         run: |
           set -euo pipefail
-          python3 - "slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-test-${{ github.run_number }}-zh.zip" <<'PY'
+          python3 - "slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-integration-${{ github.run_number }}-zh.zip" <<'PY'
           import sys
           import zipfile
 
           archive = sys.argv[1]
+          required_cores = {
+              "mgba_libretro.so",
+              "gpsp_libretro.so",
+              "fceumm_libretro.so",
+              "supafaust_libretro.so",
+              "fbneo_libretro.so",
+              "genesis_plus_gx_libretro.so",
+              "pcsx_rearmed_libretro.so",
+              "pce_fast_libretro.so",
+          }
           with zipfile.ZipFile(archive) as zf:
               bad = zf.testzip()
               if bad:
                   raise SystemExit(f"ZIP CRC failure: {bad}")
-              names = zf.namelist()
-              cores = [name for name in names if name.endswith("_libretro.so")]
-              if cores:
-                  raise SystemExit("test ZIP unexpectedly contains emulator cores: " + ", ".join(cores))
-              if "CORE-PACK-SOURCE.txt" in names:
-                  raise SystemExit("test ZIP unexpectedly contains core-pack metadata")
-              if any(name.startswith("System/lib/") for name in names):
-                  raise SystemExit("test ZIP unexpectedly contains core runtime libraries")
-              readme = zf.read("README-RG353PS.txt").decode("utf-8")
-              if "intentionally excluded" not in readme:
-                  raise SystemExit("package README does not identify this as a core-free package")
-              info = zf.read("BUILD-INFO.txt").decode("utf-8")
-              if "intentionally excluded" not in info:
-                  raise SystemExit("BUILD-INFO does not confirm the core-free package")
-              print(f"Verified core-free package: {archive} ({len(names)} members)")
+              names = set(zf.namelist())
+              required = {
+                  "LUCKLUCK-SLOT/baseos-frontend.conf",
+                  "LUCKLUCK-SLOT/launch.sh",
+                  "LUCKLUCK-SLOT/profiles/640-native.conf",
+                  "LUCKLUCK-SLOT/payload/System/slot",
+                  "LUCKLUCK-SLOT/CORE-PACK-SOURCE.txt",
+              }
+              missing = sorted(required - names)
+              if missing:
+                  raise SystemExit("managed frontend package is missing: " + ", ".join(missing))
+              profiles = sorted(
+                  name for name in names
+                  if name.startswith("LUCKLUCK-SLOT/profiles/") and name.endswith(".conf")
+              )
+              if profiles != ["LUCKLUCK-SLOT/profiles/640-native.conf"]:
+                  raise SystemExit(f"expected one default profile only, found: {profiles}")
+              core_names = {
+                  name.rsplit("/", 1)[-1] for name in names
+                  if name.startswith("LUCKLUCK-SLOT/payload/System/")
+                  and name.endswith("_libretro.so")
+              }
+              missing_cores = sorted(required_cores - core_names)
+              if missing_cores:
+                  raise SystemExit("pinned core pack is missing: " + ", ".join(missing_cores))
+              runtime_libs = [
+                  name for name in names
+                  if name.startswith("LUCKLUCK-SLOT/payload/System/lib/")
+                  and not name.endswith("/")
+              ]
+              if not runtime_libs:
+                  raise SystemExit("pinned core pack runtime libraries are missing")
+              licenses = [
+                  name for name in names
+                  if name.startswith("LUCKLUCK-SLOT/payload/System/licenses/")
+                  and not name.endswith("/")
+              ]
+              if not licenses:
+                  raise SystemExit("core/source license files are missing")
+              readme = zf.read("LUCKLUCK-SLOT/README-RG353PS.txt").decode("utf-8")
+              info = zf.read("LUCKLUCK-SLOT/BUILD-INFO.txt").decode("utf-8")
+              for label, content in (("package README", readme), ("BUILD-INFO", info)):
+                  if "pinned RG353PS AArch64/musl core pack" not in content:
+                      raise SystemExit(f"{label} does not confirm the core pack is included")
+              if "intentionally excluded" in readme or "intentionally excluded" in info:
+                  raise SystemExit("package metadata incorrectly describes a core-free test ZIP")
+              print(
+                  f"Verified single-profile integration package with {len(required_cores)} cores, "
+                  f"{len(runtime_libs)} runtime libraries and {len(licenses)} license files: "
+                  f"{archive} ({len(names)} members)"
+              )
           PY
       - name: Upload Chinese test package and checksum
         uses: actions/upload-artifact@v4
         with:
-          name: luckluck-slot-rg353ps-640x480-test-zh-${{ github.run_number }}
+          name: luckluck-slot-rg353ps-640x480-integration-zh-${{ github.run_number }}
           path: |
-            slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-test-${{ github.run_number }}-zh.zip
-            slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-test-${{ github.run_number }}-zh.zip.sha256
+            slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-integration-${{ github.run_number }}-zh.zip
+            slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-integration-${{ github.run_number }}-zh.zip.sha256
           if-no-files-found: error
           retention-days: 14

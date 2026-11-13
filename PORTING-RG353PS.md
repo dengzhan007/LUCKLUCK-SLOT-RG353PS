@@ -1,6 +1,6 @@
 # RG353PS / LUCKLUCK SLOT native 640×480 port
 
-Status: CI test branch. A successful build is not a substitute for RG353PS hardware validation.
+Status: RG353PS hardware-validated Multi-Frontend integration. Profile isolation, selector/default behavior, save-state isolation, shared data, uninstall and reinstall lifecycle were validated on-device using two profiles. The distributed Slot package now ships one default profile; additional profiles are opt-in. Exhaustive validation of every emulator core and game remains separate.
 
 ## Source and branch
 
@@ -28,7 +28,75 @@ The upstream device backend in `crates/slot-gfx/src/fbdev.rs` is replaced at bui
 
 Despite the legacy filename, this adapter uses SDL2 KMSDRM and OpenGL ES 2.0 through Panfrost. It is not the H700 proprietary Mali/EGL fbdev implementation. The adapter keeps the `FbdevSurface` interface consumed by `device_app.rs`, so the upstream 640 compositor is unchanged.
 
-The package also installs the BaseOS `launch.sh` and `manifest.conf` to both adapter discovery paths. BaseOS remains the owner of its launcher, sleep service, power/volume contract and USB gadget services.
+The distribution is a BaseOS managed package, not a legacy `manifest.conf` adapter. It is installed under
+`Frontends/LUCKLUCK-SLOT/` and contains:
+- `baseos-frontend.conf` with `package_api=1` (package-wide metadata and ownership).
+- `profiles/640-native.conf` with `profile_api=1` (the only profile shipped by default).
+- One `launch.sh` and one shared `payload/` containing the RG353PS Slot binary and UI resources.
+
+Managed package/profile support requires RG353PS BaseOS **1.2.10 or newer**. The IDs are stable:
+`LUCKLUCK-SLOT` is the package ID and `640-native` is the default profile ID. Users may add more profile IDs by copying the profile config file and assigning a new filename/display name.
+BaseOS combines them into independent runtime identities such as
+`LUCKLUCK-SLOT--640-native`. Creating another profile file creates a corresponding
+`LUCKLUCK-SLOT--<new-profile-id>` runtime identity and a new persistent instance
+directory. Metadata files are plain `key=value` data; never source or evaluate
+them as shell scripts.
+
+BaseOS starts the package `launch.sh` from its package directory and exports
+`BASEOS_PACKAGE_DIR`, `BASEOS_PACKAGE_ID`, `BASEOS_PROFILE_ID`,
+`BASEOS_PROFILE_CONFIG`, `BASEOS_INSTANCE_DIR`, `BASEOS_DATA_DIR`,
+`BASEOS_USERDATA_DIR`, `BASEOS_CARD_ROOT` and `BASEOS_GAMES_DIR`.
+The launcher must use `BASEOS_PACKAGE_DIR` for the shared program payload,
+`BASEOS_CARD_ROOT` for shared card data and `BASEOS_INSTANCE_DIR` for
+profile-owned persistent state. BaseOS remains the owner of sleep service,
+power/volume ownership contract and USB gadget services.
+
+### Multi-Frontend data contract
+
+The package ships one executable/payload and one default profile. The BaseOS
+package API remains multi-profile capable: users can add another
+`profiles/<profile-id>.conf` by copying `640-native.conf`, changing the filename
+and `display_name`, and retaining `profile_api=1`. Do not clone or rebuild the
+binary/payload for each profile. The RG353PS Slot adapter enforces these
+ownership boundaries:
+
+| Resource | Storage | Sharing |
+|---|---|---|
+| ROM library | TF1 `Games/` | Shared across profiles/frontends |
+| Battery saves | TF1 `Saves/` | Shared across profiles/frontends |
+| Emulator core files | Shared package payload or BaseOS shared-core location | One copy visible to all profiles |
+| Favorites, time zone and Slot preferences | `<instance>/userdata/slot/` via runtime `.userdata/` | Per profile |
+| Per-game core choices | `.userdata/selected_core.ini` | Per profile |
+| Mutable visual/input settings | `<instance>/system/` mounted into payload `System/` | Per profile |
+| Save-state and resume snapshots | `<instance>/states/` mounted as `States/` | Per profile |
+
+Slot uses atomic temp-file-plus-rename writes for `.userdata/slot.state`,
+`.userdata/library.cache` and `.userdata/selected_core.ini`. Bind-mount the
+whole profile `.userdata/` directory; do not single-file bind-mount those
+atomic-write targets. Legacy `System/slot.state`, `System/library.cache`
+and `System/selected_core.ini` remain read fallbacks for migration.
+
+Uninstalling a profile removes only its profile metadata. Uninstalling the
+package removes `Frontends/LUCKLUCK-SLOT/`. Neither operation deletes
+`.baseos/instances/`, shared `Games/`, `Saves/` or shared core data.
+Reinstalling the same package ID and profile IDs must reuse the same instance
+directories. Do not change IDs casually: changing an ID creates a new profile
+identity and therefore a new persistent data location.
+
+The package manifest declares `previous_package_id=slot-rg353ps`. BaseOS uses this
+one-generation alias to migrate an existing pinned `frontend_id` to the new
+`LUCKLUCK-SLOT--<profile-id>` identity. On first launch, the adapter copies the
+matching old `.baseos/instances/slot-rg353ps--<profile-id>/` data into the new
+instance directory and leaves the original untouched as a rollback copy. This
+preserves the previous per-profile settings, `.userdata/`, mutable System
+configuration and States/ snapshots after the package directory is renamed.
+
+The boot selector opens when L1 or R1 is held at power-on (Function-triggered
+USB storage has priority). A launches a profile once; START persists it as the
+default and launches it; B continues with the saved default; Y removes the
+selected profile; X uninstalls the package. The selector displays the current
+default at the top and marks the matching row `[DEFAULT]`; `AUTO` means
+priority-based discovery. Temporary A launches never modify the default.
 
 ## Preserved RG353PS input and BaseOS integration
 
@@ -66,13 +134,13 @@ The source supports two distinct compile-time UI variants:
 - Chinese test build (default): `--no-default-features --features device`
 - English release build: `--no-default-features --features device,lang-en`
 
-The push / manual test workflow builds **Chinese only**. The release workflow builds **both zh and en** from the same tagged source. Language is compiled into the binary; it is not a run-time menu switch. Core shared libraries are separate versioned assets and are not rebuilt by frontend-only builds.
+The push / manual integration workflow builds **Chinese only** and includes the pinned RG353PS AArch64/musl core pack. The release workflow builds **both zh and en** from the same tagged source, also with the same core pack. Language is compiled into the binary; it is not a run-time menu switch. Emulator cores are separately versioned assets and are reused byte-for-byte rather than rebuilt with the frontend.
 
 ## CI package and UI assets
 
-The Chinese test artifact contains:
+The Chinese integration artifact contains one default profile (`640-native`), the pinned eight-core AArch64/musl core pack and:
 
-- The RG353PS-native System/slot binary and BaseOS launcher/manifest.conf.
+- The RG353PS-native Slot binary, BaseOS package manifest (`baseos-frontend.conf`), one profile manifest and managed-package launcher.
 - The upstream System/slotnet.sh and System/fonts/ interface typeface directory. The latter is required for CJK interface text; an empty directory silently falls back to embedded label.ttf, which has no Chinese glyphs.
 - System/Carts/ from the upstream 640×480 UI bundle: ten selector badges, the machine-select title, default cartridge/disc art, loading/slot artwork and carts.tsv.
 - Six legacy GB/GBC/GBA dark/light theme marks (type_*.png) still read by the 640 frontend. The current 640 package omits these six, so CI supplements only these six PNGs from the older upstream package; no 720-layout art is taken.
@@ -80,7 +148,7 @@ The Chinese test artifact contains:
 - Overlay/ screen-mask artwork and Bootlogos/ boot-picture directory.
 - UPSTREAM-ASSET-SOURCE.txt with both pinned archive digests.
 
-The primary art, interface font and Slot network script are staged from the pinned RetroGame66/LUCKLUCK-SLOT release v2026.11.09, asset 66slot-frontend-System-640480-V20261109-fix.zip (SHA-256 5f71f6b8…d670c35). The six theme marks are supplemented from v2026.10.02, asset slot-frontend-System-2026-10-02.zip (SHA-256 6c508590…b5db8a). CI verifies both archive digests, the presence of System/fonts/ and System/slotnet.sh, and the required asset filenames before packaging. Only data assets are imported: the upstream System/slot executable and upstream libretro cores are never copied. The RG353PS musl binary remains the one built by this repository; independently provisioned *_libretro.so files are not deleted or replaced.
+The primary art, interface font and Slot network script are staged from the pinned RetroGame66/LUCKLUCK-SLOT release v2026.11.09, asset 66slot-frontend-System-640480-V20261109-fix.zip (SHA-256 5f71f6b8…d670c35). The six theme marks are supplemented from v2026.10.02, asset slot-frontend-System-2026-10-02.zip (SHA-256 6c508590…b5db8a). CI verifies both archive digests, the presence of System/fonts/ and System/slotnet.sh, and the required asset filenames before packaging. The RG353PS Slot executable is built from this repository. Eight emulator cores and their `System/lib/` dependencies are copied byte-for-byte from the separately validated core pack `rg353ps-cores-aarch64-musl-v1.0.0` (archive SHA-256 `26907ff4b2013c654c6cd58720ccd0f167609a203744ec01a9acae563b793ec8`); they are not rebuilt by the frontend workflow. The ZIP validation checks all eight core names, runtime libraries, licenses and core-pack source metadata.
 
 The archive name contains the source run/tag and language. SHA-256 sidecar is generated for every artifact. When updating an existing card, back up customised System/Carts/, System/fonts/, Overlay/, Bootlogos/ and Music/Fonts/ first because matching bundled defaults can be overwritten during extraction.
 

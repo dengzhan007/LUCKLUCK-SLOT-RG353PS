@@ -307,7 +307,7 @@ pub fn scan(root: &Path) -> Result<Vec<Cart>, StoreError> {
 /// handful on a card that files its games by machine.
 ///
 /// What it does not catch is a rom rewritten in place under its own name with its own
-/// timestamp untouched, which no directory listing can see. `System/library.cache` is a plain
+/// timestamp untouched, which no directory listing can see. `.userdata/library.cache` is a plain
 /// file: delete it to force the slow path, which is the answer for a card that has been
 /// patched rather than added to.
 pub fn scan_cached(root: &Path) -> Result<Vec<Cart>, StoreError> {
@@ -431,7 +431,8 @@ fn walk_and_build(
 
 /// Under `System/` with the rest of slot's own bookkeeping. It describes the card rather than
 /// the shelf the user curates, so it does not live beside the roms.
-const CACHE: &str = "System/library.cache";
+const CACHE: &str = ".userdata/library.cache";
+const LEGACY_CACHE: &str = "System/library.cache";
 
 /// The first line, which is also the format's version. A stale stamp or a run of bytes that
 /// only looks like one has to read as no cache at all rather than as a shelf with holes in
@@ -635,14 +636,24 @@ fn cache_path(root: &Path) -> PathBuf {
 }
 
 fn read_cache(root: &Path) -> Option<Cache> {
-    let text = std::fs::read_to_string(cache_path(root)).ok()?;
+    // Prefer the profile-private cache. Older packages kept it under System/;
+    // accept that file for migration, but never write back to the old path.
+    let text = std::fs::read_to_string(cache_path(root))
+        .or_else(|_| std::fs::read_to_string(root.join(LEGACY_CACHE)))
+        .ok()?;
     parse_cache(&text)
 }
 
 /// Best effort. A card that will not take the write still boots, it only boots slowly — which
 /// is what it did before the cache existed, so there is nothing here worth failing over.
 fn write_cache(root: &Path, cache: &Cache) {
-    let _ = atomic_write(&cache_path(root), render_cache(cache).as_bytes());
+    let path = cache_path(root);
+    if let Some(parent) = path.parent() {
+        if std::fs::create_dir_all(parent).is_err() {
+            return;
+        }
+    }
+    let _ = atomic_write(&path, render_cache(cache).as_bytes());
 }
 
 fn render_cache(cache: &Cache) -> String {
