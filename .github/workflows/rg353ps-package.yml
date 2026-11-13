@@ -106,6 +106,9 @@ jobs:
           grep -Fqx 'volume_owner=frontend' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
           grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
           grep -Fqx 'profile_api=1' baseos/platforms/rg353ps/frontends/slot/profiles/640-native.conf
+          grep -Fqx 'display_name=LUCKLUCK-SLOT' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          grep -Fqx 'previous_package_id=slot-rg353ps' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          grep -Fqx 'display_name=LUCKLUCK-SLOT' baseos/platforms/rg353ps/frontends/slot/profiles/640-native.conf
           test "$(find baseos/platforms/rg353ps/frontends/slot/profiles -maxdepth 1 -type f -name '*.conf' | wc -l | tr -d ' ')" = 1
           grep -Fqx '# baseos: volume-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx '# baseos: power-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
@@ -163,24 +166,24 @@ jobs:
                   raise SystemExit(f"ZIP CRC failure: {bad}")
               names = set(zf.namelist())
               required = {
-                  "slot-rg353ps/baseos-frontend.conf",
-                  "slot-rg353ps/launch.sh",
-                  "slot-rg353ps/profiles/640-native.conf",
-                  "slot-rg353ps/payload/System/slot",
-                  "slot-rg353ps/CORE-PACK-SOURCE.txt",
+                  "LUCKLUCK-SLOT/baseos-frontend.conf",
+                  "LUCKLUCK-SLOT/launch.sh",
+                  "LUCKLUCK-SLOT/profiles/640-native.conf",
+                  "LUCKLUCK-SLOT/payload/System/slot",
+                  "LUCKLUCK-SLOT/CORE-PACK-SOURCE.txt",
               }
               missing = sorted(required - names)
               if missing:
                   raise SystemExit("managed frontend package is missing: " + ", ".join(missing))
               profiles = sorted(
                   name for name in names
-                  if name.startswith("slot-rg353ps/profiles/") and name.endswith(".conf")
+                  if name.startswith("LUCKLUCK-SLOT/profiles/") and name.endswith(".conf")
               )
-              if profiles != ["slot-rg353ps/profiles/640-native.conf"]:
+              if profiles != ["LUCKLUCK-SLOT/profiles/640-native.conf"]:
                   raise SystemExit(f"expected one default profile only, found: {profiles}")
               core_names = {
                   name.rsplit("/", 1)[-1] for name in names
-                  if name.startswith("slot-rg353ps/payload/System/")
+                  if name.startswith("LUCKLUCK-SLOT/payload/System/")
                   and name.endswith("_libretro.so")
               }
               missing_cores = sorted(required_cores - core_names)
@@ -188,20 +191,20 @@ jobs:
                   raise SystemExit("pinned core pack is missing: " + ", ".join(missing_cores))
               runtime_libs = [
                   name for name in names
-                  if name.startswith("slot-rg353ps/payload/System/lib/")
+                  if name.startswith("LUCKLUCK-SLOT/payload/System/lib/")
                   and not name.endswith("/")
               ]
               if not runtime_libs:
                   raise SystemExit("pinned core pack runtime libraries are missing")
               licenses = [
                   name for name in names
-                  if name.startswith("slot-rg353ps/payload/System/licenses/")
+                  if name.startswith("LUCKLUCK-SLOT/payload/System/licenses/")
                   and not name.endswith("/")
               ]
               if not licenses:
                   raise SystemExit("core/source license files are missing")
-              readme = zf.read("slot-rg353ps/README-RG353PS.txt").decode("utf-8")
-              info = zf.read("slot-rg353ps/BUILD-INFO.txt").decode("utf-8")
+              readme = zf.read("LUCKLUCK-SLOT/README-RG353PS.txt").decode("utf-8")
+              info = zf.read("LUCKLUCK-SLOT/BUILD-INFO.txt").decode("utf-8")
               for label, content in (("package README", readme), ("BUILD-INFO", info)):
                   if "pinned RG353PS AArch64/musl core pack" not in content:
                       raise SystemExit(f"{label} does not confirm the core pack is included")
