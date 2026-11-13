@@ -146,6 +146,8 @@ docker run --rm --network host --platform linux/arm64 \
     echo "[rg353ps] input mapping applied"
 
     cd "$SRC"
+    echo "=== cargo test -p slot-store (profile state migration and private cache) ==="
+    cargo test --target-dir "$TARGET" -p slot-store
     echo "=== cargo build (device / release / AArch64-musl; language=$LANGUAGE; features=$FEATURES) ==="
     cargo build --release --target-dir "$TARGET" -p slot --no-default-features --features "$FEATURES"
     BIN="$TARGET/release/slot"
@@ -271,14 +273,15 @@ Extract the ZIP into the DATA partition Frontends/ directory. Do not
 merge the package into the DATA root and do not move individual files.
 BaseOS registers both 640-native and 640-native-alt configurations
 automatically. They share the Slot executable and Games/ ROM library,
-and battery saves under Saves/. Each profile keeps its own .userdata,
-.userdata/slot.state (including favorites, time zone and frontend preferences), selected
-display settings and States/ save-state snapshots. Back up Saves/ first.
+and battery saves under Saves/. Each profile keeps its own .userdata/
+(including the atomic-safe slot.state record for favorites, time zone and
+frontend preferences), mutable System settings and States/ save-state
+snapshots. Back up Saves/ first.
 Core handling: $CORE_INSTALL_NOTE
 The package contains its own payload/System/slot and UI resources. The launcher
 bind-mounts the shared DATA-root Games/ and Saves/ directories, while
-.userdata, Slot's atomic-safe .userdata/slot.state record, mutable System
-preferences and States/ are stored under the selected BaseOS profile instance. Existing shared cores in the DATA-root
+.userdata, mutable System preferences and States/ are stored under the
+selected BaseOS profile instance. Existing shared cores in the DATA-root
 System/ directory are exposed to the profile when present.
 
 Back up customised UI resources before replacing this package.
