@@ -440,6 +440,8 @@ profile automatically. Do not duplicate `payload/`, `launch.sh` or the frontend 
 profile uses the same executable, UI resources and cores. Each new ID receives its own settings
 and save-state storage. Keep existing profile filenames unchanged to reconnect their data.
 
+**Restoring a previous 640-native-alt profile:** the default package no longer ships this second profile, but its old instance data is preserved. To reconnect it, copy 640-native.conf to 640-native-alt.conf, change display_name, and reboot. Keeping the exact old filename preserves the old Profile ID, so the launcher can migrate its previous settings and save states. Using a different filename creates a new, empty profile instead.
+
 The current RG353PS integration build includes the pinned AArch64/musl core pack v1.0.0:
 eight libretro cores, runtime libraries, license texts and source metadata. The core binaries
 are reused byte-for-byte and are not rebuilt by the frontend workflow.
