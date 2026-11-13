@@ -385,6 +385,8 @@ this managed package.
    Do not put games or saves inside the frontend package.
 6. Safely eject the card, reinsert it and boot. BaseOS discovers the single default `640-native` profile automatically.
 
+When replacing the earlier package, remove the old `Frontends/slot-rg353ps/` program folder after copying `Frontends/LUCKLUCK-SLOT/`. Do **not** delete `.baseos/instances/`; BaseOS and the Slot launcher migrate the old default ID and per-profile data automatically, retaining the old instance directory as a rollback copy.
+
 BaseOS supports frontend discovery on TF1 and TF2, with TF2 taking priority. The RG353PS Slot
 launcher binds shared games and battery saves from the BaseOS TF1 data root
 (`/mnt/SDCARD/Games` and `/mnt/SDCARD/Saves`). For the validated setup, keep the Slot package
