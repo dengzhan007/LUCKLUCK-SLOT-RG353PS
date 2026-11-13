@@ -307,6 +307,11 @@ BaseOS 支持 TF1 与 TF2 的前端发现，TF2 优先；本 RG353PS Slot 启动
 
 Profile 用户数据保存在 `/mnt/SDCARD/.baseos/instances/LUCKLUCK-SLOT--<profile-id>/`，与程序包目录分离。删除 Profile 或整个前端包不会删除这些实例数据、`Games/`、`Saves/` 或共享核心；重新安装相同 package ID 和 profile ID 后，会重新接入原有配置与即时存档。不要手动删除 `.baseos/instances/`，除非你确实要清空相应配置档的数据。
 
+从旧测试包 `slot-rg353ps` 升级时，BaseOS 会自动把已保存的默认项迁移为
+`LUCKLUCK-SLOT--<profile-id>`。每个匹配的 Profile 首次启动时，启动器会把旧实例数据复制到新的
+`.baseos/instances/LUCKLUCK-SLOT--<profile-id>/`，旧目录会保留为回滚副本，不会自动删除。
+确认新包的设置和即时存档正常前，请保留旧实例目录。
+
 #### 按需创建额外 Profile
 
 若你需要第二套或更多独立配置，在电脑上打开 `Frontends/LUCKLUCK-SLOT/profiles/`：
