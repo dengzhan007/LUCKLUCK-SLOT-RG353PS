@@ -176,7 +176,7 @@ docker run --rm --network host --platform linux/arm64 \
     test -s "$FRONTEND_PACKAGE/profiles/640-native.conf"
     PROFILE_COUNT="$(find "$FRONTEND_PACKAGE/profiles" -maxdepth 1 -type f -name '*.conf' | wc -l | tr -d ' ')"
     [ "$PROFILE_COUNT" = 1 ] || {
-      echo "expected only one default profile in the Slot package, found $PROFILE_COUNT" >&2
+      echo "expected one default Slot profile, found $PROFILE_COUNT" >&2
       exit 1
     }
     grep -Fq "# baseos: volume-owned" "$FRONTEND_PACKAGE/launch.sh"
@@ -278,7 +278,8 @@ Extract the ZIP so the one top-level slot-rg353ps/ directory is directly
 inside DATA/Frontends/. Do not merge its contents into the DATA root.
 BaseOS discovers one default profile, 640-native, automatically. Users who
 need another configuration can copy profiles/640-native.conf to a new
-<profile-id>.conf in the profiles/ directory and change display_name.
+<profile-id>.conf in Frontends/slot-rg353ps/profiles/ and change display_name.
+For example, copy it to profiles/my-config.conf and set display_name=My Config.
 The new filename (without .conf) becomes the independent profile ID. The
 executable, payload and core files remain shared; do not duplicate them.
 
@@ -308,9 +309,9 @@ profiles use the same executable and core files but do not share their
 preferences, core choices or save-state snapshots.
 
 Core handling: $CORE_INSTALL_NOTE
-The frontend test ZIP is intentionally core-free. A full release package
-may include the pinned core pack. The launcher also exposes existing shared
-cores when they are installed in the supported shared locations.
+This build includes the pinned RG353PS AArch64/musl emulator core pack,
+runtime libraries, license texts and core-pack source metadata. The launcher
+exposes these shared core files to the selected profile.
 
 Back up customised UI resources before replacing this package. Do not delete
 /mnt/SDCARD/.baseos/instances/ when removing or reinstalling the frontend;
