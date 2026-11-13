@@ -62,7 +62,55 @@ fn slot_state_round_trips_including_a_stem_with_an_equals_sign() {
         art_source: slot_store::ART_SOURCE_DEFAULT,
     };
     write_slot_state(d.path(), &s).unwrap();
+    assert!(
+        d.path().join(".userdata/slot.state").is_file(),
+        "mutable Slot state must be written below the directory-mounted userdata root"
+    );
+    assert!(
+        !d.path().join("System/slot.state").exists(),
+        "the legacy System/slot.state path must not be used for new atomic writes"
+    );
     assert_eq!(read_slot_state(d.path()), s);
+}
+
+/// Existing cards still read their old System/slot.state, and the next write moves the
+/// complete settings record into the profile-private userdata directory.
+#[test]
+fn legacy_system_slot_state_migrates_on_the_next_write() {
+    let d = tmp_root();
+    std::fs::write(
+        d.path().join("System/slot.state"),
+        "cart=Emerald\nbrightness=7\nblue_light=2\nvolume=44\nmuted=1\nclock_set=1\nutc_offset_min=120\n",
+    )
+    .unwrap();
+
+    let mut state = read_slot_state(d.path());
+    assert_eq!(state.utc_offset_min, 120);
+    state.volume = 73;
+    write_slot_state(d.path(), &state).unwrap();
+
+    let private = std::fs::read_to_string(d.path().join(".userdata/slot.state")).unwrap();
+    assert!(private.contains("utc_offset_min=120"));
+    assert!(private.contains("volume=73"));
+    assert_eq!(read_slot_state(d.path()), state);
+}
+
+#[test]
+fn profile_private_state_takes_precedence_over_legacy_shared_state() {
+    let d = tmp_root();
+    std::fs::write(
+        d.path().join("System/slot.state"),
+        "cart=\nbrightness=7\nblue_light=2\nvolume=44\nmuted=0\nclock_set=1\nutc_offset_min=120\n",
+    )
+    .unwrap();
+    std::fs::create_dir_all(d.path().join(".userdata")).unwrap();
+    std::fs::write(
+        d.path().join(".userdata/slot.state"),
+        "cart=\nbrightness=7\nblue_light=2\nvolume=44\nmuted=0\nclock_set=1\nutc_offset_min=-450\n",
+    )
+    .unwrap();
+
+    assert_eq!(read_slot_state(d.path()).utc_offset_min, -450);
 }
 
 /// The mode is the one field a card written before it existed can be missing, so it is the one
