@@ -277,7 +277,9 @@ Requires RG353PS BaseOS 1.2.10 or newer (managed package/profile API 1).
 Extract the ZIP so the one top-level LUCKLUCK-SLOT/ directory is directly
 inside DATA/Frontends/. Do not merge its contents into the DATA root.
 BaseOS discovers one default profile, 640-native, automatically; the selector displays
-LUCKLUCK-SLOT as the default frontend name. Users who
+LUCKLUCK-SLOT as the default frontend name. When upgrading from the old package, remove
+Frontends/slot-rg353ps/ after installing this folder, but keep .baseos/instances/ so the
+old default and profile data can migrate. Users who
 need another configuration can copy profiles/640-native.conf to a new
 <profile-id>.conf in Frontends/LUCKLUCK-SLOT/profiles/ and change display_name.
 For example, copy it to profiles/my-config.conf and set display_name=My Config.
