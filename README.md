@@ -421,6 +421,13 @@ directory. Removing a profile or the entire package does not delete these instan
 the previous settings and save states. Do not manually delete `.baseos/instances/` unless you
 intend to erase that profile's data.
 
+When upgrading from the earlier package ID `slot-rg353ps`, BaseOS automatically maps
+the saved default to `LUCKLUCK-SLOT--<profile-id>`. On the first launch of each matching
+profile, the launcher copies its old instance data into the new
+`.baseos/instances/LUCKLUCK-SLOT--<profile-id>/` directory and leaves the old directory
+untouched as a rollback copy. Keep the old instance directories until you have verified
+the new package's settings and save states.
+
 #### Creating additional profiles (optional)
 
 The default package contains only `640-native`. To add another independent configuration,
