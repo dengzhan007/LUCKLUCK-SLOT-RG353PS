@@ -282,6 +282,8 @@ LUCKLUCK SLOT 运行在 **RG353PS BaseOS 1.2.10 或更新版本**上。此版本
 5. ROM 放在数据分区根目录的 `Games/<机种>/`，电池存档放在 `Saves/`。不要把 ROM 或存档放进 `Frontends/LUCKLUCK-SLOT/`。
 6. 安全弹出 SD 卡，插回掌机开机。BaseOS 会自动发现默认的 `640-native` 配置档。
 
+从旧测试包升级时，将新目录复制到 `Frontends/LUCKLUCK-SLOT/` 后，可以删除旧的 `Frontends/slot-rg353ps/` 程序目录，避免选择器同时显示两个包。**不要删除 `.baseos/instances/`**：BaseOS 会迁移默认启动 ID，Slot 首次启动会迁移对应 Profile 的设置和即时存档；旧实例目录会保留作回滚副本。
+
 BaseOS 支持 TF1 与 TF2 的前端发现，TF2 优先；本 RG353PS Slot 启动器把共享 ROM 和电池存档绑定到 BaseOS 的 TF1 数据根目录（`/mnt/SDCARD/Games` 与 `/mnt/SDCARD/Saves`）。首次部署建议将前端包和游戏数据都放在 TF1，以便管理和备份。
 
 ### 双 Profile、默认启动与数据归属
