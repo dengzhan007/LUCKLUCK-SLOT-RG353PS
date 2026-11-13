@@ -272,13 +272,13 @@ merge the package into the DATA root and do not move individual files.
 BaseOS registers both 640-native and 640-native-alt configurations
 automatically. They share the Slot executable and Games/ ROM library,
 and battery saves under Saves/. Each profile keeps its own .userdata,
-System/slot.state (including favorites and frontend preferences), selected
+.userdata/slot.state (including favorites, time zone and frontend preferences), selected
 display settings and States/ save-state snapshots. Back up Saves/ first.
 Core handling: $CORE_INSTALL_NOTE
 The package contains its own payload/System/slot and UI resources. The launcher
 bind-mounts the shared DATA-root Games/ and Saves/ directories, while
-.userdata, mutable System state files and States/ are stored under the
-selected BaseOS profile instance. Existing shared cores in the DATA-root
+.userdata, Slot's atomic-safe .userdata/slot.state record, mutable System
+preferences and States/ are stored under the selected BaseOS profile instance. Existing shared cores in the DATA-root
 System/ directory are exposed to the profile when present.
 
 Back up customised UI resources before replacing this package.
