@@ -27,7 +27,7 @@ on:
       baseos_ref:
         description: "BaseOS-RG353PS ref used for the device adapter"
         required: true
-        default: "da48d3165009b709d732af32c4e82e2ab3bfb4b3"
+        default: "976a6e03834af89d5c0e5de510618ca97703cdf6"
 
 permissions:
   contents: read
@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dengzhan007/BaseOS-RG353PS
-          ref: ${{ inputs.baseos_ref || 'da48d3165009b709d732af32c4e82e2ab3bfb4b3' }}
+          ref: ${{ inputs.baseos_ref || '976a6e03834af89d5c0e5de510618ca97703cdf6' }}
           path: baseos
 
       - name: Validate native 640 tree and BaseOS adapter
@@ -93,6 +93,9 @@ jobs:
           grep -Fq 'mount --bind "$SDCARD/Saves" "$SLOT_ROOT/Saves"' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fq 'for state_name in slot.state theme.txt' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fq 'mount --bind "$PROFILE_STATES_DIR" "$SLOT_ROOT/States"' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'root.join(".userdata").join("slot.state")' slot/crates/slot-store/src/slot_state.rs
+          grep -Fq 'root.join(".userdata").join("library.cache")' slot/crates/slot-store/src/scan.rs
+          grep -Fq 'cargo test -p slot-store' slot/packaging/rg353ps/build.sh
           grep -Fq 'slot-userdata-seeded' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'export AGS_NET_MODULE=rtw88_8821cs' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fq 'AGS_ROOT="$FRONTEND_ROOT" "$FRONTEND_WIFI" down' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
@@ -125,7 +128,7 @@ jobs:
       - name: Build Chinese core-free frontend test ZIP only
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
-          BASEOS_REF: ${{ inputs.baseos_ref || 'da48d3165009b709d732af32c4e82e2ab3bfb4b3' }}
+          BASEOS_REF: ${{ inputs.baseos_ref || '976a6e03834af89d5c0e5de510618ca97703cdf6' }}
           SLOT_REV: ${{ github.sha }}
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
@@ -173,6 +176,8 @@ jobs:
               readme = zf.read("slot-rg353ps/README-RG353PS.txt").decode("utf-8")
               if "intentionally excluded" not in readme:
                   raise SystemExit("package README does not identify this as a core-free package")
+              if ".userdata/" not in readme or "time zone" not in readme:
+                  raise SystemExit("package README does not describe per-profile settings persistence")
               info = zf.read("slot-rg353ps/BUILD-INFO.txt").decode("utf-8")
               if "intentionally excluded" not in info:
                   raise SystemExit("BUILD-INFO does not confirm the core-free package")
