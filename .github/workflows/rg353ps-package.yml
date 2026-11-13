@@ -17,7 +17,7 @@ on:
       baseos_ref:
         description: "BaseOS-RG353PS ref used for the device adapter"
         required: true
-        default: "9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7"
+        default: "9880c686cdd99bc2af99807076fee539d29a05fa"
 
 permissions:
   contents: read
@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dengzhan007/BaseOS-RG353PS
-          ref: ${{ inputs.baseos_ref || '9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7' }}
+          ref: ${{ inputs.baseos_ref || '9880c686cdd99bc2af99807076fee539d29a05fa' }}
           path: baseos
 
       - name: Validate native 640 tree and BaseOS adapter
@@ -68,7 +68,8 @@ jobs:
           grep -Fq 'all_four_rg353ps_axes_use_the_upstream_slot_stick_directions' /tmp/evdev-rg353ps-check.rs
           grep -Fq '0x13c => Btn::Menu, // Function' /tmp/evdev-rg353ps-check.rs
           test -f baseos/platforms/rg353ps/frontends/slot/launch.sh
-          test -f baseos/platforms/rg353ps/frontends/slot/manifest.conf
+          test -f baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          test -f baseos/platforms/rg353ps/frontends/slot/profiles/640-native.conf
           sh -n baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
           grep -Fq 'modprobe rtw88_8821cs' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
           grep -Fq 'rfkill_dev in /sys/class/rfkill/rfkill*' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
@@ -76,17 +77,22 @@ jobs:
           grep -Fq 'ip link set wlan0 up' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
           sh -n baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
           grep -Fq 'System/slotnet.sh' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
-          grep -Fqx 'export AGS_ROOT="$SDCARD"' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'AGS_ROOT=$SLOT_ROOT' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'mount --bind "$SDCARD/Games" "$SLOT_ROOT/Games"' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'mount --bind "$SDCARD/Saves" "$SLOT_ROOT/Saves"' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          grep -Fq 'slot-userdata-seeded' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'export AGS_NET_MODULE=rtw88_8821cs' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fq 'AGS_ROOT="$FRONTEND_ROOT" "$FRONTEND_WIFI" down' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
           grep -Fq 'AGS_ROOT="$FRONTEND_ROOT" "$FRONTEND_WIFI" up' baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
           ! grep -Fq 'BASEOS_WIFI' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'export BASEOS_SLEEP=/usr/sbin/rg353ps-sleep' baseos/platforms/rg353ps/frontends/slot/launch.sh
-          grep -Fqx 'adapter_api=1' baseos/platforms/rg353ps/frontends/slot/manifest.conf
-          grep -Fqx 'volume_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
-          grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/frontends/slot/manifest.conf
+          grep -Fqx 'package_api=1' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          grep -Fqx 'volume_owner=frontend' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
+          grep -Fqx 'profile_api=1' baseos/platforms/rg353ps/frontends/slot/profiles/640-native.conf
           grep -Fqx '# baseos: volume-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx '# baseos: power-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
+          sh -n baseos/platforms/rg353ps/frontends/slot/launch.sh
           sh -n slot/packaging/rg353ps/build.sh
           sh -n slot/packaging/rg353ps/stage-upstream-assets.sh
           sh -n slot/packaging/rg353ps/stage-core-pack.sh
@@ -105,7 +111,7 @@ jobs:
       - name: Build Chinese core-free frontend test ZIP only
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
-          BASEOS_REF: ${{ inputs.baseos_ref || '9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7' }}
+          BASEOS_REF: ${{ inputs.baseos_ref || '9880c686cdd99bc2af99807076fee539d29a05fa' }}
           SLOT_REV: ${{ github.sha }}
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
@@ -129,17 +135,30 @@ jobs:
               if bad:
                   raise SystemExit(f"ZIP CRC failure: {bad}")
               names = zf.namelist()
+              required = {
+                  "slot-rg353ps/baseos-frontend.conf",
+                  "slot-rg353ps/launch.sh",
+                  "slot-rg353ps/profiles/640-native.conf",
+                  "slot-rg353ps/payload/System/slot",
+              }
+              missing = sorted(required - set(names))
+              if missing:
+                  raise SystemExit("managed frontend package is missing: " + ", ".join(missing))
+              if any(name.startswith("System/") or name.startswith(".baseos/frontends/") for name in names):
+                  raise SystemExit("test ZIP still contains the legacy DATA-root install layout")
+              if not any(name.startswith("slot-rg353ps/payload/") for name in names):
+                  raise SystemExit("test ZIP has no managed frontend payload")
               cores = [name for name in names if name.endswith("_libretro.so")]
               if cores:
                   raise SystemExit("test ZIP unexpectedly contains emulator cores: " + ", ".join(cores))
-              if "CORE-PACK-SOURCE.txt" in names:
+              if "slot-rg353ps/CORE-PACK-SOURCE.txt" in names:
                   raise SystemExit("test ZIP unexpectedly contains core-pack metadata")
               if any(name.startswith("System/lib/") for name in names):
                   raise SystemExit("test ZIP unexpectedly contains core runtime libraries")
-              readme = zf.read("README-RG353PS.txt").decode("utf-8")
+              readme = zf.read("slot-rg353ps/README-RG353PS.txt").decode("utf-8")
               if "intentionally excluded" not in readme:
                   raise SystemExit("package README does not identify this as a core-free package")
-              info = zf.read("BUILD-INFO.txt").decode("utf-8")
+              info = zf.read("slot-rg353ps/BUILD-INFO.txt").decode("utf-8")
               if "intentionally excluded" not in info:
                   raise SystemExit("BUILD-INFO does not confirm the core-free package")
               print(f"Verified core-free package: {archive} ({len(names)} members)")
