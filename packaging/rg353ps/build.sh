@@ -287,7 +287,7 @@ package deletes Frontends/slot-rg353ps/, but does not delete per-profile data
 under .baseos/instances/, Games/, Saves/ or shared core data. Reinstalling
 the same package/profile IDs reuses the saved profile settings and states.
 Keep the package ID and profile file names unchanged when you want to retain
-those profiles' existing data.
+the existing profile data.
 
 Data ownership
 --------------
