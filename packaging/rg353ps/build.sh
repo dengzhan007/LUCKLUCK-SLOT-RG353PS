@@ -246,7 +246,7 @@ LUCKLUCK SLOT / 66slot - RG353PS 640x480 ${LANGUAGE} build
 Target: Anbernic RG353PS / RK3566 / 640x480 panel / BaseOS
 Language: $LANGUAGE ($LANGUAGE_NAME)
 Display: SDL2 KMSDRM fullscreen + OpenGL ES; not the upstream Mali fbdev EGL path.
-This archive has one top-level `slot-rg353ps/` folder. Extract it directly
+This archive has one top-level slot-rg353ps/ folder. Extract it directly
 into DATA/Frontends/; BaseOS discovers it as one managed frontend package.
 It contains the RG353PS executable and the UI art/font bundle inside payload/:
 System/Carts/, System/fonts/, Music/, Overlay/ and Bootlogos/. It also uses the upstream System/slotnet.sh, so Slot owns Wi-Fi
@@ -267,17 +267,17 @@ the boot-opening video audio.
 
 Install
 -------
-Extract the ZIP into the DATA partition `Frontends/` directory. Do not
+Extract the ZIP into the DATA partition Frontends/ directory. Do not
 merge the package into the DATA root and do not move individual files.
-BaseOS registers both `640-native` and `640-native-alt` configurations
+BaseOS registers both 640-native and 640-native-alt configurations
 automatically. They share the Slot executable and game/save folders but keep
-their `.userdata`, favorites, recent-played list and frontend settings
+their .userdata, favorites, recent-played list and frontend settings
 separate. Back up saves first.
 Core handling: $CORE_INSTALL_NOTE
-The package contains its own `payload/System/slot` and UI resources. The launcher
-bind-mounts the shared DATA-root `Games/` and `Saves/` directories and keeps
-Slot `.userdata` under its BaseOS profile instance. Existing shared cores in
-the DATA-root `System/` directory are exposed to the profile when present.
+The package contains its own payload/System/slot and UI resources. The launcher
+bind-mounts the shared DATA-root Games/ and Saves/ directories and keeps
+Slot .userdata under its BaseOS profile instance. Existing shared cores in
+the DATA-root System/ directory are exposed to the profile when present.
 Back up customised UI resources before replacing this package.
 
 Resolution
@@ -325,9 +325,9 @@ import zipfile
 archive = pathlib.Path(sys.argv[1])
 package = pathlib.Path(sys.argv[2])
 members = (
-    "System/fonts/Plix-Bold.otf",
-    "Music/Fonts/unifont-16px.otf",
-    "Music/Fonts/press-start-2p.ttf",
+    "slot-rg353ps/payload/System/fonts/Plix-Bold.otf",
+    "slot-rg353ps/payload/Music/Fonts/unifont-16px.otf",
+    "slot-rg353ps/payload/Music/Fonts/press-start-2p.ttf",
 )
 with zipfile.ZipFile(archive) as zf:
     bad = zf.testzip()
