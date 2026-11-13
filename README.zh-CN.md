@@ -324,6 +324,8 @@ Profile 用户数据保存在 `/mnt/SDCARD/.baseos/instances/LUCKLUCK-SLOT--<pro
 
 文件名（不含 `.conf`）就是新的 Profile ID。不要复制 `payload/`、`launch.sh` 或整个前端包；所有 Profile 共用同一份程序、资源与核心。新 Profile 会获得独立设置和即时存档目录。需要保留原配置的数据时，不要改变已有 Profile 文件名。
 
+**恢复旧版的 `640-native-alt` 配置：** 新默认包不再预置第二个 Profile，但旧 alt 的实例数据仍会保留。若想继续使用它，请把 `640-native.conf` 复制为 `640-native-alt.conf`，修改 `display_name` 后重启。必须保留原文件名，才能使用旧 Profile ID 并迁回它之前的设置和即时存档。若改用其他文件名，就会创建一套新的空配置。
+
 当前整合构建会附带固定版本的 **RG353PS AArch64/musl 核心包 v1.0.0**，包括八个 libretro 核心、运行库、许可证和源码/来源信息；核心不会在前端构建时重新编译。
 
 运行后，**在货架上长按 `B`**，同一网络下的电脑可通过 SFTP 连接；插 USB 线时，BaseOS 也会提供 MTP 文件访问。
