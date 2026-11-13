@@ -4,6 +4,7 @@ use tempfile::tempdir;
 fn root_with(ini: Option<&str>) -> tempfile::TempDir {
     let d = tempdir().unwrap();
     std::fs::create_dir(d.path().join("System")).unwrap();
+    std::fs::create_dir(d.path().join(".userdata")).unwrap();
     if let Some(text) = ini {
         std::fs::write(d.path().join(".userdata/selected_core.ini"), text).unwrap();
     }
@@ -84,14 +85,37 @@ fn core_names_round_trip() {
 
 #[test]
 fn profile_private_core_choices_take_precedence_over_legacy_choices() {
-    let d = root_with(Some("Emerald = mgba\n"));
-    std::fs::create_dir_all(d.path().join(".userdata")).unwrap();
+    let d = root_with(None);
+    std::fs::write(d.path().join("System/selected_core.ini"), "Emerald = mgba\n").unwrap();
     std::fs::write(
         d.path().join(".userdata/selected_core.ini"),
         "Emerald = gpsp\n",
     )
     .unwrap();
     assert_eq!(core_for(d.path(), "Emerald"), Core::Gpsp);
+}
+
+#[test]
+fn legacy_system_core_choices_remain_readable_before_migration() {
+    let d = root_with(None);
+    std::fs::write(d.path().join("System/selected_core.ini"), "Emerald = gpsp\n").unwrap();
+    assert_eq!(core_for(d.path(), "Emerald"), Core::Gpsp);
+}
+
+#[test]
+fn the_first_private_core_write_preserves_legacy_entries_and_comments() {
+    let d = root_with(None);
+    std::fs::write(
+        d.path().join("System/selected_core.ini"),
+        "# keep this note\nEmerald = mgba\nMetroid Fusion = gpsp\n",
+    )
+    .unwrap();
+
+    slot_store::write_selected_core(d.path(), "Emerald", Core::Gpsp).unwrap();
+    let text = std::fs::read_to_string(d.path().join(".userdata/selected_core.ini")).unwrap();
+    assert!(text.contains("# keep this note"));
+    assert!(text.contains("Emerald = gpsp"));
+    assert!(text.contains("Metroid Fusion = gpsp"));
 }
 
 #[test]
