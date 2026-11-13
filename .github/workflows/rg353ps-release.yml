@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dengzhan007/BaseOS-RG353PS
-          ref: 9e21d04f18f3e4f4750dd2a889b78cf3aecd39f7
+          ref: ad7c3b5e050cf37745a6b734b579a4200318b366
           path: baseos
 
       - name: Validate native 640 tree
@@ -58,7 +58,7 @@ jobs:
       - name: Build language-specific release ZIP
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
-          BASEOS_REF: 7bce4b8b9abe18d87bc55cfb28006320e3deef20
+          BASEOS_REF: ad7c3b5e050cf37745a6b734b579a4200318b366
           SLOT_REV: ${{ github.sha }}
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
@@ -68,6 +68,61 @@ jobs:
           DIAGNOSTIC_NO_BOOT_SFX: "yes"
           RG353PS_WORK: ${{ github.workspace }}/slot/work/rg353ps
         run: sh slot/packaging/rg353ps/build.sh
+
+      - name: Verify full package contains the default profile and pinned core pack
+        run: |
+          set -euo pipefail
+          python3 - "slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-${{ github.ref_type == 'tag' && github.ref_name || 'rg353ps-v2026.11.11' }}-${{ matrix.language }}.zip" <<'PY'
+          import sys
+          import zipfile
+
+          archive = sys.argv[1]
+          required_cores = {
+              "mgba_libretro.so", "gpsp_libretro.so", "fceumm_libretro.so",
+              "supafaust_libretro.so", "fbneo_libretro.so",
+              "genesis_plus_gx_libretro.so", "pcsx_rearmed_libretro.so",
+              "pce_fast_libretro.so",
+          }
+          with zipfile.ZipFile(archive) as zf:
+              bad = zf.testzip()
+              if bad:
+                  raise SystemExit(f"ZIP CRC failure: {bad}")
+              names = set(zf.namelist())
+              required = {
+                  "LUCKLUCK-SLOT/baseos-frontend.conf",
+                  "LUCKLUCK-SLOT/launch.sh",
+                  "LUCKLUCK-SLOT/profiles/640-native.conf",
+                  "LUCKLUCK-SLOT/payload/System/slot",
+                  "LUCKLUCK-SLOT/CORE-PACK-SOURCE.txt",
+              }
+              missing = sorted(required - names)
+              if missing:
+                  raise SystemExit("package is missing: " + ", ".join(missing))
+              profiles = sorted(
+                  n for n in names
+                  if n.startswith("LUCKLUCK-SLOT/profiles/") and n.endswith(".conf")
+              )
+              if profiles != ["LUCKLUCK-SLOT/profiles/640-native.conf"]:
+                  raise SystemExit(f"expected one default profile, found: {profiles}")
+              cores = {
+                  n.rsplit("/", 1)[-1] for n in names
+                  if n.startswith("LUCKLUCK-SLOT/payload/System/") and n.endswith("_libretro.so")
+              }
+              missing_cores = sorted(required_cores - cores)
+              if missing_cores:
+                  raise SystemExit("core pack is missing: " + ", ".join(missing_cores))
+              runtime = [n for n in names if n.startswith("LUCKLUCK-SLOT/payload/System/lib/") and not n.endswith("/")]
+              licenses = [n for n in names if n.startswith("LUCKLUCK-SLOT/payload/System/licenses/") and not n.endswith("/")]
+              if not runtime:
+                  raise SystemExit("core runtime libraries are missing")
+              if not licenses:
+                  raise SystemExit("core license/source files are missing")
+              for name in ("LUCKLUCK-SLOT/README-RG353PS.txt", "LUCKLUCK-SLOT/BUILD-INFO.txt"):
+                  content = zf.read(name).decode("utf-8")
+                  if "pinned RG353PS AArch64/musl core pack" not in content:
+                      raise SystemExit(f"{name} does not document the included core pack")
+              print(f"Verified full package: {len(profiles)} default profile, {len(required_cores)} cores, {len(runtime)} runtime libraries and {len(licenses)} license files: {archive}")
+          PY
 
       - name: Upload language package
         uses: actions/upload-artifact@v4
