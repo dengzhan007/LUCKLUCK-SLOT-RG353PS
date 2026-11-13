@@ -86,6 +86,13 @@ naming step:
 
 ## About this fork
 
+This port uses the **BaseOS managed frontend package/profile API 1** (RG353PS BaseOS 1.2.10+).
+Install it as `Frontends/slot-rg353ps/`. The package exposes `640-native` and
+`640-native-alt` profiles; they share one executable/resource payload but keep
+independent settings, favorites, core selections and save-state snapshots. BaseOS owns
+discovery, the boot selector, default startup and uninstall; Slot owns its UI and game runtime.
+
+
 LUCKLUCK SLOT turns a BaseOS handheld into a shelf of game carts. Beyond upstream it gives you:
 
 - **Ten machines on one shelf** — GBA, GB, GBC, Famicom, Super Famicom, Mega Drive, PlayStation,
@@ -361,31 +368,65 @@ Emerald = gpsp
 
 ## Installing
 
-LUCKLUCK SLOT runs on **BaseOS**, which supports **both a single-card (TF1) and a dual-card
-(TF1 + TF2) layout**. Put the frontend on whichever layout the device is set up for — a second
-card (TF2) simply takes priority if present.
+This RG353PS package requires **BaseOS 1.2.10 or newer**, which provides managed frontend
+package/profile API 1. Older BaseOS builds discover legacy adapters only and cannot launch
+this managed package.
 
-1. Write the latest **BaseOS** image for your device to an SD card (see BaseOS's install notes).
-2. **Insert it, power on once, and let the first boot finish** — BaseOS expands the data partition
-   to fill the card. It then shows its "no frontend" prompt (expected). **Do not copy anything onto
-   the card before this first boot** — step 2 *creates* the partition and a pre-placed file would be
-   wiped.
-3. Power off, pull the card, plug it into a computer. A volume (labelled `BASEOS`) appears, sized to
-   the whole card.
-4. **Unzip the frontend package from [Releases](#downloads) into the card root.** Its top level is
-   `System/`; put `Games/`, `Labels/`, `Saves/`, `Cartridge/`, `Wallpapers/`, `Bootlogos/`, `Music/`
-   beside it. The folders come pre-built in the package — do **not** create them by hand.
-5. Put the card back, power on; the frontend starts.
+1. Flash the RG353PS BaseOS image to an SD card.
+2. Insert it, power on once, and let the first boot finish so BaseOS can expand the data partition.
+   **Do not copy files to the card before this first boot**; partition expansion may recreate it.
+3. Power off, connect the card to a computer, and open the user-data volume (usually labelled
+   `BASEOS`).
+4. Create `Frontends/` at the data-volume root if it does not exist. Extract the release ZIP into
+   `Frontends/` while preserving its top-level `slot-rg353ps/` directory. The final path must be
+   `Frontends/slot-rg353ps/baseos-frontend.conf`; do not extract `payload/` or `profiles/`
+   directly into the data root.
+5. Keep ROMs in `Games/<machine>/` and battery saves in `Saves/` at the data-volume root.
+   Do not put games or saves inside the frontend package.
+6. Safely eject the card, reinsert it and boot. BaseOS discovers both Slot profiles automatically.
 
-Once it is running, **hold `B` on the shelf** and a PC on the same Wi-Fi can reach the card over
-sftp without pulling it. Plugged in over USB, the card also answers MTP, so it appears as a device
-in Explorer or Finder.
+BaseOS supports frontend discovery on TF1 and TF2, with TF2 taking priority. The RG353PS Slot
+launcher binds shared games and battery saves from the BaseOS TF1 data root
+(`/mnt/SDCARD/Games` and `/mnt/SDCARD/Saves`). For the validated setup, keep the Slot package
+and game data on TF1.
 
-(Developers: build with `python _tools/build_slot.py`, deploy with `python _tools/deploy_bin.py`
-over adb — it pushes the binary to `System/slot`, chmods it, clears the cache and reboots. Or by
-hand: `adb push System/slot /mnt/sdcard/System/slot && adb shell chmod 0755
-/mnt/sdcard/System/slot && adb shell sync && adb reboot`.)
+### Profiles, default startup and data ownership
 
+The package includes `640-native` and `640-native-alt`. They use one shared Slot executable,
+UI payload and core files, but each has its own persistent configuration. Hold **L1 or R1 while
+powering on** to open the BaseOS selector (a Function-triggered USB storage request has priority).
+
+- **A** launches the highlighted profile once without changing the saved default.
+- **START** saves the highlighted profile as the default and launches it.
+- **B** cancels and continues with the saved default.
+- **Y** confirms removal of only the highlighted profile.
+- **X** confirms removal of the complete Slot package.
+
+The selector shows `DEFAULT STARTUP` at the top and marks the matching row with `[DEFAULT]`.
+In automatic mode it displays `AUTO`. An A-key temporary launch never changes the default.
+
+| Data | Ownership |
+|---|---|
+| ROMs in `Games/` | Shared by all profiles/frontends |
+| Battery saves in `Saves/` (`.sav` / `.srm`) | Shared |
+| Emulator core files | One shared package/core copy |
+| Theme, time zone, favorites and Slot preferences | Per profile |
+| `selected_core.ini` core choices | Per profile |
+| `States/` save-state/resume snapshots | Per profile |
+
+Profile data lives under
+`/mnt/SDCARD/.baseos/instances/slot-rg353ps--<profile-id>/`, separately from the package
+directory. Removing a profile or the entire package does not delete these instance directories,
+`Games/`, `Saves/` or shared cores. Reinstalling the same package ID and profile IDs reconnects
+the previous settings and save states. Do not manually delete `.baseos/instances/` unless you
+intend to erase that profile's data.
+
+The CI frontend test ZIP intentionally excludes emulator cores. Full release packages may include
+the pinned AArch64/musl core pack; with a core-free test ZIP, prepare the required cores in a
+supported shared-core location first.
+
+Once running, **hold `B` on the shelf** to expose SFTP access to a PC on the same Wi-Fi. USB
+connection also exposes the card through BaseOS MTP.
 ## Boot picture and boot opening
 
 The boot picture and the boot opening are separate assets. The picture is selected from `Bootlogos/` in Settings; the optional opening lives at `System/boot_opening.slotvid` and plays between the picture and the shelf's first frame.
