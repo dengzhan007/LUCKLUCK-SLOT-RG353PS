@@ -87,7 +87,7 @@ naming step:
 ## About this fork
 
 This port uses the **BaseOS managed frontend package/profile API 1** (RG353PS BaseOS 1.2.10+).
-Install it as `Frontends/slot-rg353ps/`. The package exposes `640-native` profile by default; users who need more configurations can create additional
+Install it as `Frontends/LUCKLUCK-SLOT/`. The package exposes `640-native` profile by default; users who need more configurations can create additional
 profile files themselves. All profiles share one executable/resource payload but keep
 independent settings, favorites, core selections and save-state snapshots. BaseOS owns
 discovery, the boot selector, default startup and uninstall; Slot owns its UI and game runtime.
@@ -378,8 +378,8 @@ this managed package.
 3. Power off, connect the card to a computer, and open the user-data volume (usually labelled
    `BASEOS`).
 4. Create `Frontends/` at the data-volume root if it does not exist. Extract the release ZIP into
-   `Frontends/` while preserving its top-level `slot-rg353ps/` directory. The final path must be
-   `Frontends/slot-rg353ps/baseos-frontend.conf`; do not extract `payload/` or `profiles/`
+   `Frontends/` while preserving its top-level `LUCKLUCK-SLOT/` directory. The final path must be
+   `Frontends/LUCKLUCK-SLOT/baseos-frontend.conf`; do not extract `payload/` or `profiles/`
    directly into the data root.
 5. Keep ROMs in `Games/<machine>/` and battery saves in `Saves/` at the data-volume root.
    Do not put games or saves inside the frontend package.
@@ -415,7 +415,7 @@ In automatic mode it displays `AUTO`. An A-key temporary launch never changes th
 | `States/` save-state/resume snapshots | Per profile |
 
 Profile data lives under
-`/mnt/SDCARD/.baseos/instances/slot-rg353ps--<profile-id>/`, separately from the package
+`/mnt/SDCARD/.baseos/instances/LUCKLUCK-SLOT--<profile-id>/`, separately from the package
 directory. Removing a profile or the entire package does not delete these instance directories,
 `Games/`, `Saves/` or shared cores. Reinstalling the same package ID and profile IDs reconnects
 the previous settings and save states. Do not manually delete `.baseos/instances/` unless you
@@ -424,7 +424,7 @@ intend to erase that profile's data.
 #### Creating additional profiles (optional)
 
 The default package contains only `640-native`. To add another independent configuration,
-copy `Frontends/slot-rg353ps/profiles/640-native.conf` to a new file such as
+copy `Frontends/LUCKLUCK-SLOT/profiles/640-native.conf` to a new file such as
 `my-config.conf`, change its `display_name`, and keep `profile_api=1`. The filename without
 `.conf` becomes the new Profile ID. Safely eject the card and reboot; BaseOS discovers the new
 profile automatically. Do not duplicate `payload/`, `launch.sh` or the frontend package: every
