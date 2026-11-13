@@ -94,6 +94,7 @@ jobs:
           grep -Fq 'for state_name in slot.state theme.txt' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fq 'mount --bind "$PROFILE_STATES_DIR" "$SLOT_ROOT/States"' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fq 'root.join(".userdata").join("slot.state")' slot/crates/slot-store/src/slot_state.rs
+          grep -Fq 'const SELECTED_CORE_FILE: &str = ".userdata/selected_core.ini";' slot/crates/slot-store/src/core.rs
           grep -Fq 'const CACHE: &str = ".userdata/library.cache";' slot/crates/slot-store/src/scan.rs
           grep -Fq 'cargo test -p slot-store' slot/packaging/rg353ps/build.sh
           grep -Fq 'slot-userdata-seeded' baseos/platforms/rg353ps/frontends/slot/launch.sh
@@ -176,8 +177,8 @@ jobs:
               readme = zf.read("slot-rg353ps/README-RG353PS.txt").decode("utf-8")
               if "intentionally excluded" not in readme:
                   raise SystemExit("package README does not identify this as a core-free package")
-              if ".userdata/" not in readme or "time zone" not in readme:
-                  raise SystemExit("package README does not describe per-profile settings persistence")
+              if ".userdata/" not in readme or "time zone" not in readme or "selected_core.ini" not in readme:
+                  raise SystemExit("package README does not describe per-profile settings and core-choice persistence")
               info = zf.read("slot-rg353ps/BUILD-INFO.txt").decode("utf-8")
               if "intentionally excluded" not in info:
                   raise SystemExit("BUILD-INFO does not confirm the core-free package")
