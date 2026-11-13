@@ -27,7 +27,7 @@ on:
       baseos_ref:
         description: "BaseOS-RG353PS ref used for the device adapter"
         required: true
-        default: "5bb537e63c9656e6d759bd86387993e1432ccf0f"
+        default: "7bce4b8b9abe18d87bc55cfb28006320e3deef20"
 
 permissions:
   contents: read
@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dengzhan007/BaseOS-RG353PS
-          ref: ${{ inputs.baseos_ref || '5bb537e63c9656e6d759bd86387993e1432ccf0f' }}
+          ref: ${{ inputs.baseos_ref || '7bce4b8b9abe18d87bc55cfb28006320e3deef20' }}
           path: baseos
 
       - name: Validate native 640 tree and BaseOS adapter
@@ -80,7 +80,6 @@ jobs:
           test -f baseos/platforms/rg353ps/frontends/slot/launch.sh
           test -f baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
           test -f baseos/platforms/rg353ps/frontends/slot/profiles/640-native.conf
-          test -f baseos/platforms/rg353ps/frontends/slot/profiles/640-native-alt.conf
           sh -n baseos/platforms/rg353ps/rootfs/usr/sbin/rg353ps-sleep
           grep -Fq 'modprobe rtw88_8821cs' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
           grep -Fq 'rfkill_dev in /sys/class/rfkill/rfkill*' baseos/platforms/rg353ps/rootfs/etc/init.d/rcS
@@ -129,7 +128,7 @@ jobs:
       - name: Build Chinese core-free frontend test ZIP only
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
-          BASEOS_REF: ${{ inputs.baseos_ref || '5bb537e63c9656e6d759bd86387993e1432ccf0f' }}
+          BASEOS_REF: ${{ inputs.baseos_ref || '7bce4b8b9abe18d87bc55cfb28006320e3deef20' }}
           SLOT_REV: ${{ github.sha }}
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
