@@ -119,7 +119,7 @@ jobs:
           ### RG353PS / BaseOS 移植
           - 原生 640×480 逻辑画布与布局，基于上游 640 源码树，不缩放 720×480 画面。
           - BaseOS SDL2/KMSDRM + GLES2 显示后端，运行于 RK3566 Panfrost。
-          - 集成 RG353PS BaseOS 前端适配器、`manifest.conf`、启动脚本、MTP 辅助钩子，以及音量/电源所有权约定。
+          - 集成 RG353PS BaseOS managed package 元数据（`baseos-frontend.conf`）、默认 `640-native` Profile、启动脚本、MTP 辅助钩子，以及音量/电源所有权约定；需要多配置的用户可自行复制 Profile 配置创建。
           - 保留 RG353PS 实测按键映射、四轴摇杆参数、Wi-Fi、休眠/唤醒适配；HUD 字体后台解析。
           - 完整包包含固定版本的 AArch64/musl 模拟器核心、运行库、许可证和源码材料。
           - 正式包关闭前端默认 `Sfx::Boot` 提示音。此设置只抑制前端启动提示音，不关闭 ALSA、游戏音效或音乐，也不代表 BaseOS 开机画面阶段的功放上电噪声已解决。
