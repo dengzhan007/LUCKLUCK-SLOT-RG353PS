@@ -87,8 +87,8 @@ naming step:
 ## About this fork
 
 This port uses the **BaseOS managed frontend package/profile API 1** (RG353PS BaseOS 1.2.10+).
-Install it as `Frontends/slot-rg353ps/`. The package exposes `640-native` and
-`640-native-alt` profiles; they share one executable/resource payload but keep
+Install it as `Frontends/slot-rg353ps/`. The package exposes `640-native` profile by default; users who need more configurations can create additional
+profile files themselves. All profiles share one executable/resource payload but keep
 independent settings, favorites, core selections and save-state snapshots. BaseOS owns
 discovery, the boot selector, default startup and uninstall; Slot owns its UI and game runtime.
 
@@ -383,7 +383,7 @@ this managed package.
    directly into the data root.
 5. Keep ROMs in `Games/<machine>/` and battery saves in `Saves/` at the data-volume root.
    Do not put games or saves inside the frontend package.
-6. Safely eject the card, reinsert it and boot. BaseOS discovers both Slot profiles automatically.
+6. Safely eject the card, reinsert it and boot. BaseOS discovers the single default `640-native` profile automatically.
 
 BaseOS supports frontend discovery on TF1 and TF2, with TF2 taking priority. The RG353PS Slot
 launcher binds shared games and battery saves from the BaseOS TF1 data root
@@ -392,8 +392,8 @@ and game data on TF1.
 
 ### Profiles, default startup and data ownership
 
-The package includes `640-native` and `640-native-alt`. They use one shared Slot executable,
-UI payload and core files, but each has its own persistent configuration. Hold **L1 or R1 while
+The package includes one default profile, `640-native`. It uses the shared Slot executable,
+UI payload and core files. Hold **L1 or R1 while
 powering on** to open the BaseOS selector (a Function-triggered USB storage request has priority).
 
 - **A** launches the highlighted profile once without changing the saved default.
@@ -421,9 +421,19 @@ directory. Removing a profile or the entire package does not delete these instan
 the previous settings and save states. Do not manually delete `.baseos/instances/` unless you
 intend to erase that profile's data.
 
-The CI frontend test ZIP intentionally excludes emulator cores. Full release packages may include
-the pinned AArch64/musl core pack; with a core-free test ZIP, prepare the required cores in a
-supported shared-core location first.
+#### Creating additional profiles (optional)
+
+The default package contains only `640-native`. To add another independent configuration,
+copy `Frontends/slot-rg353ps/profiles/640-native.conf` to a new file such as
+`my-config.conf`, change its `display_name`, and keep `profile_api=1`. The filename without
+`.conf` becomes the new Profile ID. Safely eject the card and reboot; BaseOS discovers the new
+profile automatically. Do not duplicate `payload/`, `launch.sh` or the frontend package: every
+profile uses the same executable, UI resources and cores. Each new ID receives its own settings
+and save-state storage. Keep existing profile filenames unchanged to reconnect their data.
+
+The current RG353PS integration build includes the pinned AArch64/musl core pack v1.0.0:
+eight libretro cores, runtime libraries, license texts and source metadata. The core binaries
+are reused byte-for-byte and are not rebuilt by the frontend workflow.
 
 Once running, **hold `B` on the shelf** to expose SFTP access to a PC on the same Wi-Fi. USB
 connection also exposes the card through BaseOS MTP.
