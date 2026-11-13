@@ -21,7 +21,7 @@ for declaration in package_api=1 volume_owner=frontend power_owner=frontend; do
     echo "invalid package manifest (missing $declaration)" >&2; exit 1;
   }
 done
-grep -Fqx 'profile_api=1' "$FRONTEND_PROFILE" || {
+grep -Fqx "profile_api=1" "$FRONTEND_PROFILE" || {
   echo "invalid frontend profile manifest" >&2; exit 1;
 }
 PACKAGE_PRIORITY="$(sed -n 's/^priority=//p' "$FRONTEND_PACKAGE_MANIFEST")"
@@ -166,11 +166,11 @@ docker run --rm --network host --platform linux/arm64 \
     for profile_file in /slot-port/profiles/*.conf; do
       [ -f "$profile_file" ] || continue
       cp "$profile_file" "$FRONTEND_PACKAGE/profiles/"
-      grep -Fqx 'profile_api=1' "$FRONTEND_PACKAGE/profiles/${profile_file##*/}"
+      grep -Fqx "profile_api=1" "$FRONTEND_PACKAGE/profiles/${profile_file##*/}"
     done
     chmod 0644 "$FRONTEND_PACKAGE/baseos-frontend.conf" "$FRONTEND_PACKAGE"/profiles/*.conf
     sh -n "$FRONTEND_PACKAGE/launch.sh"
-    grep -Fqx 'package_api=1' "$FRONTEND_PACKAGE/baseos-frontend.conf"
+    grep -Fqx "package_api=1" "$FRONTEND_PACKAGE/baseos-frontend.conf"
     test -s "$FRONTEND_PACKAGE/profiles/640-native.conf"
     test -s "$FRONTEND_PACKAGE/profiles/640-native-alt.conf"
     grep -Fq "# baseos: volume-owned" "$FRONTEND_PACKAGE/launch.sh"
@@ -189,7 +189,7 @@ docker run --rm --network host --platform linux/arm64 \
     # replace separately provisioned libretro cores.
     cp -a /upstream-assets/System/Carts "$SYSTEM/"
     cp -a /upstream-assets/System/fonts "$SYSTEM/"
-    test -n "$(find "$SYSTEM/fonts" -maxdepth 1 -type f \( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \) -print -quit)"
+    test -n "$(find "$SYSTEM/fonts" -maxdepth 1 -type f \( -iname "*.ttf" -o -iname "*.otf" -o -iname "*.ttc" \) -print -quit)"
     test -s "$SYSTEM/slotnet.sh"
     for asset_dir in Music Overlay Bootlogos; do
       test -d "/upstream-assets/$asset_dir"
@@ -212,7 +212,7 @@ docker run --rm --network host --platform linux/arm64 \
     else
       CORE_PACKAGE_NOTE="Emulator core libraries and their runtime dependencies are intentionally excluded from this frontend-only package."
       CORE_INSTALL_NOTE="No emulator cores or System/lib runtime dependencies are included. Merging this package leaves existing core files untouched."
-      if find "$PKG" -type f -name '*_libretro.so' -print -quit | grep -q .; then
+      if find "$PKG" -type f -name "*_libretro.so" -print -quit | grep -q .; then
         echo "frontend-only package unexpectedly contains a libretro core" >&2
         exit 1
       fi
@@ -267,7 +267,7 @@ the boot-opening video audio.
 
 Install
 -------
-Extract the ZIP into the DATA partition's `Frontends/` directory. Do not
+Extract the ZIP into the DATA partition `Frontends/` directory. Do not
 merge the package into the DATA root and do not move individual files.
 BaseOS registers both `640-native` and `640-native-alt` configurations
 automatically. They share the Slot executable and game/save folders but keep
@@ -276,7 +276,7 @@ separate. Back up saves first.
 Core handling: $CORE_INSTALL_NOTE
 The package contains its own `payload/System/slot` and UI resources. The launcher
 bind-mounts the shared DATA-root `Games/` and `Saves/` directories and keeps
-Slot's `.userdata` under its BaseOS profile instance. Existing shared cores in
+Slot `.userdata` under its BaseOS profile instance. Existing shared cores in
 the DATA-root `System/` directory are exposed to the profile when present.
 Back up customised UI resources before replacing this package.
 
@@ -316,7 +316,7 @@ EOF
     cd "$PKG"
     zip -qr "$ARCHIVE" .
     # Check the ZIP CRCs and verify its font members byte-for-byte against PKG.
-    python3 - "$ARCHIVE" "$PKG" <<'PYFONT'
+    python3 - "$ARCHIVE" "$PKG" <<PYFONT
 import hashlib
 import pathlib
 import sys
