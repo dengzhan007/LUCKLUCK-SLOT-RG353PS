@@ -154,8 +154,8 @@ Packages are published on the [Releases page](https://github.com/dengzhan007/LUC
 
 | Package | Language |
 |---|---|
-| `66slot-frontend-System-640480-V*-RG353PS.zip` | Simplified Chinese |
-| `66slot-frontend-System-640480-V*-RG353PS-en.zip` | English |
+| `LUCKLUCK-SLOT-RG353PS-640x480-<tag>-zh.zip` | Simplified Chinese |
+| `LUCKLUCK-SLOT-RG353PS-640x480-<tag>-en.zip` | English |
 
 Each package contains the frontend, BaseOS adapter files, UI assets, all eight external AArch64/musl libretro cores, required runtime libraries, and the associated licence/source materials. GB and GBC use the frontend's built-in cores.
 
