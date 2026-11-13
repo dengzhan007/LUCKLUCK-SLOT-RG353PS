@@ -286,6 +286,11 @@ For example, copy it to profiles/my-config.conf and set display_name=My Config.
 The new filename (without .conf) becomes the independent profile ID. The
 executable, payload and core files remain shared; do not duplicate them.
 
+If you previously used the old 640-native-alt profile and want its data back,
+create profiles/640-native-alt.conf by copying 640-native.conf and changing
+display_name. Keep the exact old filename so the old profile ID and saved
+instance data are reused; a different filename creates a new empty profile.
+
 Hold L1 or R1 while powering on to open the frontend selector (Function USB
 storage keeps priority). The top line names the current default startup and
 the matching profile row is marked [DEFAULT]; AUTO means BaseOS will choose
