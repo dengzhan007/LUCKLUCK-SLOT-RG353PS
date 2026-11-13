@@ -33,7 +33,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dengzhan007/BaseOS-RG353PS
-          ref: ad7c3b5e050cf37745a6b734b579a4200318b366
+          ref: 0e47604f29d68cd4e06faf70c45e8e692e4102e3
           path: baseos
 
       - name: Validate native 640 tree
@@ -58,7 +58,7 @@ jobs:
       - name: Build language-specific release ZIP
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
-          BASEOS_REF: ad7c3b5e050cf37745a6b734b579a4200318b366
+          BASEOS_REF: 0e47604f29d68cd4e06faf70c45e8e692e4102e3
           SLOT_REV: ${{ github.sha }}
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
