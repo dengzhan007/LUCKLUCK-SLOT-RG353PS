@@ -126,13 +126,13 @@ The source supports two distinct compile-time UI variants:
 - Chinese test build (default): `--no-default-features --features device`
 - English release build: `--no-default-features --features device,lang-en`
 
-The push / manual test workflow builds **Chinese only**. The release workflow builds **both zh and en** from the same tagged source. Language is compiled into the binary; it is not a run-time menu switch. Core shared libraries are separate versioned assets and are not rebuilt by frontend-only builds.
+The push / manual integration workflow builds **Chinese only** and includes the pinned RG353PS AArch64/musl core pack. The release workflow builds **both zh and en** from the same tagged source, also with the same core pack. Language is compiled into the binary; it is not a run-time menu switch. Emulator cores are separately versioned assets and are reused byte-for-byte rather than rebuilt with the frontend.
 
 ## CI package and UI assets
 
-The Chinese test artifact contains:
+The Chinese integration artifact contains one default profile (`640-native`), the pinned eight-core AArch64/musl core pack and:
 
-- The RG353PS-native System/slot binary and BaseOS launcher/manifest.conf.
+- The RG353PS-native Slot binary, BaseOS package manifest (`baseos-frontend.conf`), one profile manifest and managed-package launcher.
 - The upstream System/slotnet.sh and System/fonts/ interface typeface directory. The latter is required for CJK interface text; an empty directory silently falls back to embedded label.ttf, which has no Chinese glyphs.
 - System/Carts/ from the upstream 640×480 UI bundle: ten selector badges, the machine-select title, default cartridge/disc art, loading/slot artwork and carts.tsv.
 - Six legacy GB/GBC/GBA dark/light theme marks (type_*.png) still read by the 640 frontend. The current 640 package omits these six, so CI supplements only these six PNGs from the older upstream package; no 720-layout art is taken.
@@ -140,7 +140,7 @@ The Chinese test artifact contains:
 - Overlay/ screen-mask artwork and Bootlogos/ boot-picture directory.
 - UPSTREAM-ASSET-SOURCE.txt with both pinned archive digests.
 
-The primary art, interface font and Slot network script are staged from the pinned RetroGame66/LUCKLUCK-SLOT release v2026.11.09, asset 66slot-frontend-System-640480-V20261109-fix.zip (SHA-256 5f71f6b8…d670c35). The six theme marks are supplemented from v2026.10.02, asset slot-frontend-System-2026-10-02.zip (SHA-256 6c508590…b5db8a). CI verifies both archive digests, the presence of System/fonts/ and System/slotnet.sh, and the required asset filenames before packaging. Only data assets are imported: the upstream System/slot executable and upstream libretro cores are never copied. The RG353PS musl binary remains the one built by this repository; independently provisioned *_libretro.so files are not deleted or replaced.
+The primary art, interface font and Slot network script are staged from the pinned RetroGame66/LUCKLUCK-SLOT release v2026.11.09, asset 66slot-frontend-System-640480-V20261109-fix.zip (SHA-256 5f71f6b8…d670c35). The six theme marks are supplemented from v2026.10.02, asset slot-frontend-System-2026-10-02.zip (SHA-256 6c508590…b5db8a). CI verifies both archive digests, the presence of System/fonts/ and System/slotnet.sh, and the required asset filenames before packaging. The RG353PS Slot executable is built from this repository. Eight emulator cores and their `System/lib/` dependencies are copied byte-for-byte from the separately validated core pack `rg353ps-cores-aarch64-musl-v1.0.0` (archive SHA-256 `26907ff4b2013c654c6cd58720ccd0f167609a203744ec01a9acae563b793ec8`); they are not rebuilt by the frontend workflow. The ZIP validation checks all eight core names, runtime libraries, licenses and core-pack source metadata.
 
 The archive name contains the source run/tag and language. SHA-256 sidecar is generated for every artifact. When updating an existing card, back up customised System/Carts/, System/fonts/, Overlay/, Bootlogos/ and Music/Fonts/ first because matching bundled defaults can be overwritten during extraction.
 
