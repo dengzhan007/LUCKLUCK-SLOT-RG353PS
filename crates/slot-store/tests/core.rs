@@ -5,7 +5,7 @@ fn root_with(ini: Option<&str>) -> tempfile::TempDir {
     let d = tempdir().unwrap();
     std::fs::create_dir(d.path().join("System")).unwrap();
     if let Some(text) = ini {
-        std::fs::write(d.path().join("System/selected_core.ini"), text).unwrap();
+        std::fs::write(d.path().join(".userdata/selected_core.ini"), text).unwrap();
     }
     d
 }
@@ -83,9 +83,25 @@ fn core_names_round_trip() {
 }
 
 #[test]
+fn profile_private_core_choices_take_precedence_over_legacy_choices() {
+    let d = root_with(Some("Emerald = mgba\n"));
+    std::fs::create_dir_all(d.path().join(".userdata")).unwrap();
+    std::fs::write(
+        d.path().join(".userdata/selected_core.ini"),
+        "Emerald = gpsp\n",
+    )
+    .unwrap();
+    assert_eq!(core_for(d.path(), "Emerald"), Core::Gpsp);
+}
+
+#[test]
 fn writing_a_core_creates_the_file_when_absent() {
     let d = root_with(None);
     slot_store::write_selected_core(d.path(), "Emerald", Core::Gpsp).unwrap();
+    assert!(
+        d.path().join(".userdata/selected_core.ini").is_file(),
+        "new core choices must be written below profile userdata"
+    );
     assert_eq!(core_for(d.path(), "Emerald"), Core::Gpsp);
 }
 
@@ -99,7 +115,7 @@ fn writing_a_core_replaces_that_carts_line_and_leaves_the_rest_alone() {
     )));
     slot_store::write_selected_core(d.path(), "Emerald", Core::Gpsp).unwrap();
 
-    let text = std::fs::read_to_string(d.path().join("System/selected_core.ini")).unwrap();
+    let text = std::fs::read_to_string(d.path().join(".userdata/selected_core.ini")).unwrap();
     assert!(
         text.contains("# my notes"),
         "a hand-written comment was destroyed"
@@ -132,6 +148,6 @@ fn writing_the_default_still_records_it() {
     let d = root_with(Some("Emerald = gpsp\n"));
     slot_store::write_selected_core(d.path(), "Emerald", Core::Mgba).unwrap();
     assert_eq!(core_for(d.path(), "Emerald"), Core::Mgba);
-    let text = std::fs::read_to_string(d.path().join("System/selected_core.ini")).unwrap();
+    let text = std::fs::read_to_string(d.path().join(".userdata/selected_core.ini")).unwrap();
     assert!(text.contains("Emerald = mgba"));
 }
