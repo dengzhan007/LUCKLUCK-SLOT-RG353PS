@@ -174,7 +174,11 @@ docker run --rm --network host --platform linux/arm64 \
     sh -n "$FRONTEND_PACKAGE/launch.sh"
     grep -Fqx "package_api=1" "$FRONTEND_PACKAGE/baseos-frontend.conf"
     test -s "$FRONTEND_PACKAGE/profiles/640-native.conf"
-    test -s "$FRONTEND_PACKAGE/profiles/640-native-alt.conf"
+    PROFILE_COUNT="$(find "$FRONTEND_PACKAGE/profiles" -maxdepth 1 -type f -name '*.conf' | wc -l | tr -d ' ')"
+    [ "$PROFILE_COUNT" = 1 ] || {
+      echo "expected only one default profile in the Slot package, found $PROFILE_COUNT" >&2
+      exit 1
+    }
     grep -Fq "# baseos: volume-owned" "$FRONTEND_PACKAGE/launch.sh"
     grep -Fq "# baseos: power-owned" "$FRONTEND_PACKAGE/launch.sh"
 
@@ -272,7 +276,11 @@ Install
 Requires RG353PS BaseOS 1.2.10 or newer (managed package/profile API 1).
 Extract the ZIP so the one top-level slot-rg353ps/ directory is directly
 inside DATA/Frontends/. Do not merge its contents into the DATA root.
-BaseOS discovers both 640-native and 640-native-alt profiles automatically.
+BaseOS discovers one default profile, 640-native, automatically. Users who
+need another configuration can copy profiles/640-native.conf to a new
+<profile-id>.conf in the profiles/ directory and change display_name.
+The new filename (without .conf) becomes the independent profile ID. The
+executable, payload and core files remain shared; do not duplicate them.
 
 Hold L1 or R1 while powering on to open the frontend selector (Function USB
 storage keeps priority). The top line names the current default startup and
