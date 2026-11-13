@@ -276,7 +276,8 @@ Install
 Requires RG353PS BaseOS 1.2.10 or newer (managed package/profile API 1).
 Extract the ZIP so the one top-level LUCKLUCK-SLOT/ directory is directly
 inside DATA/Frontends/. Do not merge its contents into the DATA root.
-BaseOS discovers one default profile, 640-native, automatically. Users who
+BaseOS discovers one default profile, 640-native, automatically; the selector displays
+LUCKLUCK-SLOT as the default frontend name. Users who
 need another configuration can copy profiles/640-native.conf to a new
 <profile-id>.conf in Frontends/LUCKLUCK-SLOT/profiles/ and change display_name.
 For example, copy it to profiles/my-config.conf and set display_name=My Config.
@@ -298,15 +299,20 @@ the same package/profile IDs reuses the saved profile settings and states.
 Keep the package ID and profile file names unchanged when you want to retain
 the existing profile data.
 
+Upgrade from the former package ID slot-rg353ps is supported. BaseOS migrates the
+saved default ID automatically; when each matching profile first launches, the
+launcher copies the old instance data into LUCKLUCK-SLOT's new instance directory.
+The old instance directory is kept as a rollback copy and is not deleted.
+
 Data ownership
 --------------
 Shared by all profiles: Games/ ROMs, battery saves under Saves/, and the
 emulator core files exposed from the shared package/core location.
 Private to each profile: .userdata/ (including slot.state and
 selected_core.ini), mutable System preferences, favorites, time zone,
-per-game core selections and States/ save-state snapshots. Thus the two
-profiles use the same executable and core files but do not share their
-preferences, core choices or save-state snapshots.
+per-game core selections and States/ save-state snapshots. All profiles
+use the same executable and core files but do not share preferences, core
+choices or save-state snapshots.
 
 Core handling: $CORE_INSTALL_NOTE
 This build includes the pinned RG353PS AArch64/musl emulator core pack,
