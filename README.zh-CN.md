@@ -46,7 +46,7 @@ LUCKLUCK SLOT（缩写 **66slot**）是运行在 **BaseOS** 上的多机种掌�
 ## 关于本修改版
 
 本移植包使用 BaseOS **managed frontend package/profile API 1**（RG353PS BaseOS 1.2.10+）。它作为一个
-`Frontends/slot-rg353ps/` 程序包安装，默认只提供 `640-native` 一个配置档；
+`Frontends/LUCKLUCK-SLOT/` 程序包安装，默认只提供 `640-native` 一个配置档；
 需要多套配置的用户可以自行复制 profile 配置文件创建额外配置。每个 Profile 共用同一个程序与资源包，
 但拥有独立设置、收藏、核心选择和即时存档。BaseOS 负责前端发现、
 默认启动、选择器和卸载；Slot 负责界面、游戏库与模拟器运行。
@@ -278,8 +278,8 @@ LUCKLUCK SLOT 运行在 **RG353PS BaseOS 1.2.10 或更新版本**上。此版本
 1. 将适用于 RG353PS 的 BaseOS 镜像烧录到 SD 卡。
 2. 首次开机并等待 BaseOS 完成数据分区扩展。**首次启动前不要向卡里拷贝文件**，扩展过程可能重建数据分区。
 3. 关机，将卡连接电脑，打开用户数据卷（通常标为 `BASEOS`）。
-4. 在数据分区根目录创建 `Frontends/`（若不存在），把发布包解压到 `Frontends/` 中，并保留 ZIP 内的顶层目录。最终路径必须是 `Frontends/slot-rg353ps/baseos-frontend.conf`，不能把包内的 `payload/`、`profiles/` 等目录直接解压到卡根。
-5. ROM 放在数据分区根目录的 `Games/<机种>/`，电池存档放在 `Saves/`。不要把 ROM 或存档放进 `Frontends/slot-rg353ps/`。
+4. 在数据分区根目录创建 `Frontends/`（若不存在），把发布包解压到 `Frontends/` 中，并保留 ZIP 内的顶层目录。最终路径必须是 `Frontends/LUCKLUCK-SLOT/baseos-frontend.conf`，不能把包内的 `payload/`、`profiles/` 等目录直接解压到卡根。
+5. ROM 放在数据分区根目录的 `Games/<机种>/`，电池存档放在 `Saves/`。不要把 ROM 或存档放进 `Frontends/LUCKLUCK-SLOT/`。
 6. 安全弹出 SD 卡，插回掌机开机。BaseOS 会自动发现默认的 `640-native` 配置档。
 
 BaseOS 支持 TF1 与 TF2 的前端发现，TF2 优先；本 RG353PS Slot 启动器把共享 ROM 和电池存档绑定到 BaseOS 的 TF1 数据根目录（`/mnt/SDCARD/Games` 与 `/mnt/SDCARD/Saves`）。首次部署建议将前端包和游戏数据都放在 TF1，以便管理和备份。
@@ -305,11 +305,11 @@ BaseOS 支持 TF1 与 TF2 的前端发现，TF2 优先；本 RG353PS Slot 启动
 | `selected_core.ini` 核心选择 | 每个 Profile 独立 |
 | `States/` 即时存档/续玩状态 | 每个 Profile 独立 |
 
-Profile 用户数据保存在 `/mnt/SDCARD/.baseos/instances/slot-rg353ps--<profile-id>/`，与程序包目录分离。删除 Profile 或整个前端包不会删除这些实例数据、`Games/`、`Saves/` 或共享核心；重新安装相同 package ID 和 profile ID 后，会重新接入原有配置与即时存档。不要手动删除 `.baseos/instances/`，除非你确实要清空相应配置档的数据。
+Profile 用户数据保存在 `/mnt/SDCARD/.baseos/instances/LUCKLUCK-SLOT--<profile-id>/`，与程序包目录分离。删除 Profile 或整个前端包不会删除这些实例数据、`Games/`、`Saves/` 或共享核心；重新安装相同 package ID 和 profile ID 后，会重新接入原有配置与即时存档。不要手动删除 `.baseos/instances/`，除非你确实要清空相应配置档的数据。
 
 #### 按需创建额外 Profile
 
-若你需要第二套或更多独立配置，在电脑上打开 `Frontends/slot-rg353ps/profiles/`：
+若你需要第二套或更多独立配置，在电脑上打开 `Frontends/LUCKLUCK-SLOT/profiles/`：
 
 1. 复制 `640-native.conf`，例如命名为 `my-config.conf`。
 2. 编辑副本中的 `display_name`，例如 `display_name=My Config`；保留 `profile_api=1`。
