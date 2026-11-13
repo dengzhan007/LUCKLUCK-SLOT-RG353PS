@@ -95,8 +95,8 @@ LUCKLUCK SLOT 把一台 BaseOS 掌机变成一整排卡带。相对上游，它�
 
 | 包 | 语言 |
 |---|---|
-| `66slot-frontend-System-640480-V*-RG353PS.zip` | 简体中文 |
-| `66slot-frontend-System-640480-V*-RG353PS-en.zip` | 英文界面 |
+| `LUCKLUCK-SLOT-RG353PS-640x480-<tag>-zh.zip` | 简体中文 |
+| `LUCKLUCK-SLOT-RG353PS-640x480-<tag>-en.zip` | 英文界面 |
 
 每个包均包含前端、BaseOS 适配文件、UI 资源、八个外置 AArch64/musl libretro 核心、所需运行库及对应许可证/源码材料。GB 和 GBC 使用前端内置核心。
 
