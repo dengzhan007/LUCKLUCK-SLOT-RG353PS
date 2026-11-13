@@ -59,6 +59,8 @@ fn slot_state_round_trips_including_a_stem_with_an_equals_sign() {
         keymap_mode: false,
         turbo_hz: slot_store::TURBO_HZ_DEFAULT,
         ui_sfx: slot_store::UI_SFX_DEFAULT,
+                insert_resume: slot_store::INSERT_RESUME_DEFAULT,
+        eject_save: slot_store::EJECT_SAVE_DEFAULT,
         art_source: slot_store::ART_SOURCE_DEFAULT,
     };
     write_slot_state(d.path(), &s).unwrap();
@@ -236,6 +238,8 @@ fn slot_state_round_trips_a_negative_utc_offset() {
         keymap_mode: false,
         turbo_hz: slot_store::TURBO_HZ_DEFAULT,
         ui_sfx: slot_store::UI_SFX_DEFAULT,
+                insert_resume: slot_store::INSERT_RESUME_DEFAULT,
+        eject_save: slot_store::EJECT_SAVE_DEFAULT,
         art_source: slot_store::ART_SOURCE_DEFAULT,
     };
     write_slot_state(d.path(), &s).unwrap();
@@ -336,7 +340,9 @@ fn slot_state_round_trips_each_doze_choice() {
             keymap_mode: false,
             turbo_hz: slot_store::TURBO_HZ_DEFAULT,
             ui_sfx: slot_store::UI_SFX_DEFAULT,
-            art_source: slot_store::ART_SOURCE_DEFAULT,
+                    insert_resume: slot_store::INSERT_RESUME_DEFAULT,
+        eject_save: slot_store::EJECT_SAVE_DEFAULT,
+        art_source: slot_store::ART_SOURCE_DEFAULT,
         };
         write_slot_state(d.path(), &s).unwrap();
         assert_eq!(
@@ -470,7 +476,9 @@ fn slot_state_round_trips_each_speed_choice() {
             keymap_mode: false,
             turbo_hz: slot_store::TURBO_HZ_DEFAULT,
             ui_sfx: slot_store::UI_SFX_DEFAULT,
-            art_source: slot_store::ART_SOURCE_DEFAULT,
+                    insert_resume: slot_store::INSERT_RESUME_DEFAULT,
+        eject_save: slot_store::EJECT_SAVE_DEFAULT,
+        art_source: slot_store::ART_SOURCE_DEFAULT,
         };
         write_slot_state(d.path(), &s).unwrap();
         assert_eq!(
