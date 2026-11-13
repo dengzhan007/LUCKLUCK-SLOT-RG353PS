@@ -83,6 +83,14 @@ Reinstalling the same package ID and profile IDs must reuse the same instance
 directories. Do not change IDs casually: changing an ID creates a new profile
 identity and therefore a new persistent data location.
 
+The package manifest declares `previous_package_id=slot-rg353ps`. BaseOS uses this
+one-generation alias to migrate an existing pinned `frontend_id` to the new
+`LUCKLUCK-SLOT--<profile-id>` identity. On first launch, the adapter copies the
+matching old `.baseos/instances/slot-rg353ps--<profile-id>/` data into the new
+instance directory and leaves the original untouched as a rollback copy. This
+preserves the previous per-profile settings, `.userdata/`, mutable System
+configuration and States/ snapshots after the package directory is renamed.
+
 The boot selector opens when L1 or R1 is held at power-on (Function-triggered
 USB storage has priority). A launches a profile once; START persists it as the
 default and launches it; B continues with the saved default; Y removes the
