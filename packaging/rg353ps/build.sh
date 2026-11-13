@@ -100,7 +100,7 @@ docker run --rm --network host --platform linux/arm64 \
     SRC=/tmp/slot-src
     TARGET=/cargo-target
     PKG=/tmp/package
-    FRONTEND_PACKAGE="$PKG/slot-rg353ps"
+    FRONTEND_PACKAGE="$PKG/LUCKLUCK-SLOT"
     PAYLOAD="$FRONTEND_PACKAGE/payload"
     SYSTEM="$PAYLOAD/System"
     LANGUAGE="${LANGUAGE:-zh}"
@@ -187,7 +187,7 @@ docker run --rm --network host --platform linux/arm64 \
     for license in crates/slot-ui/assets/*.LICENSE.txt crates/slot-ui/assets/*.OFL.txt; do
       [ -f "$license" ] && cp "$license" "$SYSTEM/licenses/"
     done
-    tar --exclude=.git -czf "$SYSTEM/licenses/slot-rg353ps-$SLOT_REV-source.tar.gz" -C "$SRC" .
+    tar --exclude=.git -czf "$SYSTEM/licenses/LUCKLUCK-SLOT-$SLOT_REV-source.tar.gz" -C "$SRC" .
     "$SYSTEM/slot" --init-root "$PAYLOAD"
 
     # The upstream 640 release carries the UI resources as external card files.
@@ -252,7 +252,7 @@ LUCKLUCK SLOT / 66slot - RG353PS 640x480 ${LANGUAGE} build
 Target: Anbernic RG353PS / RK3566 / 640x480 panel / BaseOS
 Language: $LANGUAGE ($LANGUAGE_NAME)
 Display: SDL2 KMSDRM fullscreen + OpenGL ES; not the upstream Mali fbdev EGL path.
-This archive has one top-level slot-rg353ps/ folder. Extract it directly
+This archive has one top-level LUCKLUCK-SLOT/ folder. Extract it directly
 into DATA/Frontends/; BaseOS discovers it as one managed frontend package.
 It contains the RG353PS executable and the UI art/font bundle inside payload/:
 System/Carts/, System/fonts/, Music/, Overlay/ and Bootlogos/. It also uses the upstream System/slotnet.sh, so Slot owns Wi-Fi
@@ -274,11 +274,11 @@ the boot-opening video audio.
 Install
 -------
 Requires RG353PS BaseOS 1.2.10 or newer (managed package/profile API 1).
-Extract the ZIP so the one top-level slot-rg353ps/ directory is directly
+Extract the ZIP so the one top-level LUCKLUCK-SLOT/ directory is directly
 inside DATA/Frontends/. Do not merge its contents into the DATA root.
 BaseOS discovers one default profile, 640-native, automatically. Users who
 need another configuration can copy profiles/640-native.conf to a new
-<profile-id>.conf in Frontends/slot-rg353ps/profiles/ and change display_name.
+<profile-id>.conf in Frontends/LUCKLUCK-SLOT/profiles/ and change display_name.
 For example, copy it to profiles/my-config.conf and set display_name=My Config.
 The new filename (without .conf) becomes the independent profile ID. The
 executable, payload and core files remain shared; do not duplicate them.
@@ -292,7 +292,7 @@ cancels and continues with the saved default.
 
 Y removes only the selected profile. X uninstalls the whole Slot package.
 Both actions require confirmation. Removing the last profile or the whole
-package deletes Frontends/slot-rg353ps/, but does not delete per-profile data
+package deletes Frontends/LUCKLUCK-SLOT/, but does not delete per-profile data
 under .baseos/instances/, Games/, Saves/ or shared core data. Reinstalling
 the same package/profile IDs reuses the saved profile settings and states.
 Keep the package ID and profile file names unchanged when you want to retain
@@ -365,9 +365,9 @@ import zipfile
 archive = pathlib.Path(sys.argv[1])
 package = pathlib.Path(sys.argv[2])
 members = (
-    "slot-rg353ps/payload/System/fonts/Plix-Bold.otf",
-    "slot-rg353ps/payload/Music/Fonts/unifont-16px.otf",
-    "slot-rg353ps/payload/Music/Fonts/press-start-2p.ttf",
+    "LUCKLUCK-SLOT/payload/System/fonts/Plix-Bold.otf",
+    "LUCKLUCK-SLOT/payload/Music/Fonts/unifont-16px.otf",
+    "LUCKLUCK-SLOT/payload/Music/Fonts/press-start-2p.ttf",
 )
 with zipfile.ZipFile(archive) as zf:
     bad = zf.testzip()
