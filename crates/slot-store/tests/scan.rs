@@ -158,7 +158,7 @@ fn an_unchanged_card_is_answered_from_the_cache_without_reading_a_rom() {
     write_rom(&d, "Emerald.gba", "POKEMON EMER");
     assert_eq!(scan_cached(d.path()).unwrap()[0].title, "POKEMON EMER");
 
-    let cache = d.path().join("System/library.cache");
+    let cache = d.path().join(".userdata/library.cache");
     let text = std::fs::read_to_string(&cache).expect("no cache written");
     std::fs::write(&cache, text.replace("POKEMON EMER", "FROM CACHE")).unwrap();
 
@@ -207,7 +207,7 @@ fn a_corrupt_cache_is_a_full_scan_rather_than_an_error() {
     let d = tmp_root();
     write_rom(&d, "Emerald.gba", "POKEMON EMER");
     std::fs::write(
-        d.path().join("System/library.cache"),
+        d.path().join(".userdata/library.cache"),
         b"\x00 not a cache at all",
     )
     .unwrap();
@@ -226,7 +226,7 @@ fn a_cache_with_a_row_torn_out_is_a_full_scan() {
     write_rom(&d, "Metroid.gba", "METROID FUSION");
     assert_eq!(scan_cached(d.path()).unwrap().len(), 2);
 
-    let cache = d.path().join("System/library.cache");
+    let cache = d.path().join(".userdata/library.cache");
     let text = std::fs::read_to_string(&cache).unwrap();
     let mut lines: Vec<&str> = text.lines().collect();
     lines.pop();
@@ -333,6 +333,22 @@ fn the_shelf_is_grouped_by_letter() {
     assert!(carts.windows(2).all(|w| w[0].initial <= w[1].initial));
 }
 
+#[test]
+fn library_cache_is_written_under_profile_userdata() {
+    let d = tmp_root();
+    write_rom(&d, "Emerald.gba", "POKEMON EMER");
+
+    assert_eq!(scan_cached(d.path()).unwrap().len(), 1);
+    assert!(
+        d.path().join(".userdata/library.cache").is_file(),
+        "cache was not written under profile-private userdata"
+    );
+    assert!(
+        !d.path().join("System/library.cache").exists(),
+        "new cache writes must not target a single-file bind mount in System/"
+    );
+}
+
 /// **A rom removed from a subfolder of `Games/` must leave the shelf, and does not.**
 ///
 /// `list_names` walks `Games/` recursively — the doc comment on it says so, and says why: a card
@@ -395,7 +411,7 @@ fn a_rom_added_to_a_subfolder_after_the_first_scan_is_shelved() {
 
     // Rewriting the title the cache holds leaves the header on disk saying something else, so a
     // run that answers `FROM CACHE` is a run that did not open a rom — the fast path, live.
-    let cache = d.path().join("System/library.cache");
+    let cache = d.path().join(".userdata/library.cache");
     let text = std::fs::read_to_string(&cache).expect("no cache written");
     std::fs::write(&cache, text.replace("POKEMON EMER", "FROM CACHE")).unwrap();
     assert_eq!(
@@ -431,7 +447,7 @@ fn a_rescan_reads_the_card_again_rather_than_trusting_the_cache() {
     write_rom(&d, "Emerald.gba", "POKEMON EMER");
     assert_eq!(scan_cached(d.path()).unwrap()[0].title, "POKEMON EMER");
 
-    let cache = d.path().join("System/library.cache");
+    let cache = d.path().join(".userdata/library.cache");
     let text = std::fs::read_to_string(&cache).expect("no cache written");
     std::fs::write(&cache, text.replace("POKEMON EMER", "FROM CACHE")).unwrap();
 
