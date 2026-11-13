@@ -1,6 +1,6 @@
 # RG353PS / LUCKLUCK SLOT native 640×480 port
 
-Status: RG353PS hardware-validated Multi-Frontend integration. The two-profile persistence, selector/default behavior, save-state isolation, shared data, uninstall and reinstall lifecycle have passed on-device. Exhaustive validation of every emulator core and game remains separate.
+Status: RG353PS hardware-validated Multi-Frontend integration. Profile isolation, selector/default behavior, save-state isolation, shared data, uninstall and reinstall lifecycle were validated on-device using two profiles. The distributed Slot package now ships one default profile; additional profiles are opt-in. Exhaustive validation of every emulator core and game remains separate.
 
 ## Source and branch
 
@@ -31,14 +31,16 @@ Despite the legacy filename, this adapter uses SDL2 KMSDRM and OpenGL ES 2.0 thr
 The distribution is a BaseOS managed package, not a legacy `manifest.conf` adapter. It is installed under
 `Frontends/slot-rg353ps/` and contains:
 - `baseos-frontend.conf` with `package_api=1` (package-wide metadata and ownership).
-- `profiles/640-native.conf` and `profiles/640-native-alt.conf`, each with `profile_api=1`.
+- `profiles/640-native.conf` with `profile_api=1` (the only profile shipped by default).
 - One `launch.sh` and one shared `payload/` containing the RG353PS Slot binary and UI resources.
 
 Managed package/profile support requires RG353PS BaseOS **1.2.10 or newer**. The IDs are stable:
-`slot-rg353ps` is the package ID and `640-native` / `640-native-alt` are profile IDs.
+`slot-rg353ps` is the package ID and `640-native` is the default profile ID. Users may add more profile IDs by copying the profile config file and assigning a new filename/display name.
 BaseOS combines them into independent runtime identities such as
-`slot-rg353ps--640-native`. Metadata files are plain `key=value` data; never source
-or evaluate them as shell scripts.
+`slot-rg353ps--640-native`. Creating another profile file creates a corresponding
+`slot-rg353ps--<new-profile-id>` runtime identity and a new persistent instance
+directory. Metadata files are plain `key=value` data; never source or evaluate
+them as shell scripts.
 
 BaseOS starts the package `launch.sh` from its package directory and exports
 `BASEOS_PACKAGE_DIR`, `BASEOS_PACKAGE_ID`, `BASEOS_PROFILE_ID`,
@@ -51,15 +53,18 @@ power/volume ownership contract and USB gadget services.
 
 ### Multi-Frontend data contract
 
-The package has one executable/payload shared by both profiles. Do not clone or
-rebuild the binary for each profile. The RG353PS Slot adapter enforces these
+The package ships one executable/payload and one default profile. The BaseOS
+package API remains multi-profile capable: users can add another
+`profiles/<profile-id>.conf` by copying `640-native.conf`, changing the filename
+and `display_name`, and retaining `profile_api=1`. Do not clone or rebuild the
+binary/payload for each profile. The RG353PS Slot adapter enforces these
 ownership boundaries:
 
 | Resource | Storage | Sharing |
 |---|---|---|
 | ROM library | TF1 `Games/` | Shared across profiles/frontends |
 | Battery saves | TF1 `Saves/` | Shared across profiles/frontends |
-| Emulator core files | Shared package payload or BaseOS shared-core location | One copy visible to both profiles |
+| Emulator core files | Shared package payload or BaseOS shared-core location | One copy visible to all profiles |
 | Favorites, time zone and Slot preferences | `<instance>/userdata/slot/` via runtime `.userdata/` | Per profile |
 | Per-game core choices | `.userdata/selected_core.ini` | Per profile |
 | Mutable visual/input settings | `<instance>/system/` mounted into payload `System/` | Per profile |
