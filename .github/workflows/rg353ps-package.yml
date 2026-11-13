@@ -94,7 +94,7 @@ jobs:
           grep -Fq 'for state_name in slot.state theme.txt' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fq 'mount --bind "$PROFILE_STATES_DIR" "$SLOT_ROOT/States"' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fq 'root.join(".userdata").join("slot.state")' slot/crates/slot-store/src/slot_state.rs
-          grep -Fq 'root.join(".userdata").join("library.cache")' slot/crates/slot-store/src/scan.rs
+          grep -Fq 'const CACHE: &str = ".userdata/library.cache";' slot/crates/slot-store/src/scan.rs
           grep -Fq 'cargo test -p slot-store' slot/packaging/rg353ps/build.sh
           grep -Fq 'slot-userdata-seeded' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx 'export AGS_NET_MODULE=rtw88_8821cs' baseos/platforms/rg353ps/frontends/slot/launch.sh
