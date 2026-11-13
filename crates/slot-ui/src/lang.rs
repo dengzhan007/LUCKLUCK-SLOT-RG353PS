@@ -44,9 +44,8 @@ mod words {
     ///   唯一的回执。
     pub const TOAST_SLOW_ON: &str = "Slow Motion: On";
     pub const TOAST_SLOW_OFF: &str = "Slow Motion: Off";
-    /// ★ 2026-10-20: the boot picture was written. **It says "next power-on" because that is
-    /// when it happens** — the picture is read by u-boot, so nothing on screen can change now,
-    /// and a line that did not say so would read as "nothing happened".
+    /// A custom image or the generated BaseOS default was selected. The boot artwork changes
+    /// on the next startup, not immediately in the running frontend.
     pub const TOAST_BOOT_SET: &str = "Boot screen set — next power-on";
     /// It was not written, and the row went back to the picture it was on. One line rather than
     /// seven: which of the ways it can fail is in `System/boot.err`, and a device in the hand
@@ -166,13 +165,10 @@ mod words {
     /// bar**: the scan is a couple of hundred milliseconds on a full card and there is no frame
     /// to draw a bar on, so the honest report is the one that arrives.
     pub const SETTINGS_REFRESHED: &str = "Refreshed";
-    /// ★ 2026-10-20: the boot screen — the picture the machine shows the moment it is switched
-    /// on, which is *not* a slot screen: it is read by u-boot long before slot exists. The row
-    /// lists the pictures found in `Bootlogos/` on the card; picking one writes it to the
-    /// machine's boot-resource partition, and it is the **next power-on** that shows it.
+    /// The BaseOS-generated wordmark is the first, always-available boot-screen choice.
+    /// Custom BMP images found under Bootlogos/ follow it.
     pub const SETTINGS_BOOT: &str = "Boot Screen";
-    /// What that row says when the card carries no boot pictures at all.
-    pub const SETTINGS_BOOT_NONE: &str = "No pictures on card";
+    pub const SETTINGS_BOOT_DEFAULT: &str = "BaseOS default";
     /// The unit on the lid timer's values.
     pub const MINUTE_UNIT: &str = "min";
     /// ★ The lid timer's zero choice: the panel still darkens, but the machine never stops by
@@ -327,9 +323,9 @@ mod words {
     pub const TOAST_AUDIO_STRICT: &str = "音频：严格";
     pub const TOAST_SLOW_ON: &str = "慢放：开";
     pub const TOAST_SLOW_OFF: &str = "慢放：关";
-    /// ★ 2026-10-20：开机画面已写进分区。**说的是"下次开机"，因为那是它生效的时刻** ——
-    ///   那张图是 u-boot 读的，现在屏上不会有任何变化；不写这一句，这颗键就像按了没反应。
-    pub const TOAST_BOOT_SET: &str = "已写入，下次开机生效";
+    /// 已选择自定义图片或 BaseOS 默认画面。开机画面在下一次启动时生效，
+    /// 当前正在运行的前端不会立即重绘。
+    pub const TOAST_BOOT_SET: &str = "已设置，下次开机生效";
     /// 没写成，这一行退回原来那张。用一句而不是七句：具体是哪一步失败的记在
     /// `System/boot.err` 里，手上这台机器只需要知道"去看卡"。
     pub const TOAST_BOOT_FAIL: &str = "开机画面没换";
@@ -436,12 +432,9 @@ mod words {
     /// 按下去之后那一小会儿这一行显示的值。**用词不用进度条**：满卡的扫描也就几百毫秒，
     ///   屏上根本没有一帧能画进度条，所以老实的报告就是"做完了"这一句。
     pub const SETTINGS_REFRESHED: &str = "已刷新";
-    /// ★ 2026-10-20：开机画面 —— 机器通电那一刻显示的图。**不是 slot 的一屏**：
-    ///   它是 u-boot 读的，比 slot 起来早得多。这一行列出卡上 `Bootlogos/` 里的图，
-    ///   挑一张就写进机器的 boot-resource 分区，**下一次开机**才看得见。
+    /// BaseOS 生成式启动字样是第一项；用户放在 Bootlogos/ 里的 BMP 随后列出。
     pub const SETTINGS_BOOT: &str = "开机画面";
-    /// 卡上一张开机图都没有的时候，这一行显示的值。
-    pub const SETTINGS_BOOT_NONE: &str = "卡上没有图";
+    pub const SETTINGS_BOOT_DEFAULT: &str = "BaseOS 默认";
     /// 合盖时长数值后面的单位。
     pub const MINUTE_UNIT: &str = "分钟";
     /// ★ 时长那一档的 0：屏照样息，但机器**永不**自己停。**用词不用「0 分钟」**——那读起来是
