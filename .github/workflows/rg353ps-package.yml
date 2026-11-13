@@ -106,7 +106,7 @@ jobs:
           grep -Fqx 'volume_owner=frontend' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
           grep -Fqx 'power_owner=frontend' baseos/platforms/rg353ps/frontends/slot/baseos-frontend.conf
           grep -Fqx 'profile_api=1' baseos/platforms/rg353ps/frontends/slot/profiles/640-native.conf
-          grep -Fqx 'profile_api=1' baseos/platforms/rg353ps/frontends/slot/profiles/640-native-alt.conf
+          test "$(find baseos/platforms/rg353ps/frontends/slot/profiles -maxdepth 1 -type f -name '*.conf' | wc -l | tr -d ' ')" = 1
           grep -Fqx '# baseos: volume-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
           grep -Fqx '# baseos: power-owned' baseos/platforms/rg353ps/frontends/slot/launch.sh
           sh -n baseos/platforms/rg353ps/frontends/slot/launch.sh
@@ -125,7 +125,7 @@ jobs:
           restore-keys: |
             rg353ps-native-640-cargo-${{ runner.os }}-
 
-      - name: Build Chinese core-free frontend test ZIP only
+      - name: Build Chinese frontend integration ZIP with pinned emulator cores
         env:
           BASEOS_ROOT: ${{ github.workspace }}/baseos
           BASEOS_REF: ${{ inputs.baseos_ref || '7bce4b8b9abe18d87bc55cfb28006320e3deef20' }}
@@ -133,63 +133,90 @@ jobs:
           SLOT_BRANCH: ${{ github.ref_name }}
           SLOT_REPO: ${{ github.repository }}
           LANGUAGE: zh
-          INCLUDE_CORE_PACK: "no"
+          INCLUDE_CORE_PACK: "yes"
           DIAGNOSTIC_NO_BOOT_SFX: "yes"
           PACKAGE_TAG: test-${{ github.run_number }}
           RG353PS_WORK: ${{ github.workspace }}/slot/work/rg353ps
         run: sh slot/packaging/rg353ps/build.sh
 
-      - name: Verify test ZIP excludes emulator cores
+      - name: Verify integration ZIP contains the pinned emulator core pack
         run: |
           set -euo pipefail
-          python3 - "slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-test-${{ github.run_number }}-zh.zip" <<'PY'
+          python3 - "slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-integration-${{ github.run_number }}-zh.zip" <<'PY'
           import sys
           import zipfile
 
           archive = sys.argv[1]
+          required_cores = {
+              "mgba_libretro.so",
+              "gpsp_libretro.so",
+              "fceumm_libretro.so",
+              "supafaust_libretro.so",
+              "fbneo_libretro.so",
+              "genesis_plus_gx_libretro.so",
+              "pcsx_rearmed_libretro.so",
+              "pce_fast_libretro.so",
+          }
           with zipfile.ZipFile(archive) as zf:
               bad = zf.testzip()
               if bad:
                   raise SystemExit(f"ZIP CRC failure: {bad}")
-              names = zf.namelist()
+              names = set(zf.namelist())
               required = {
                   "slot-rg353ps/baseos-frontend.conf",
                   "slot-rg353ps/launch.sh",
                   "slot-rg353ps/profiles/640-native.conf",
-                  "slot-rg353ps/profiles/640-native-alt.conf",
                   "slot-rg353ps/payload/System/slot",
+                  "slot-rg353ps/CORE-PACK-SOURCE.txt",
               }
-              missing = sorted(required - set(names))
+              missing = sorted(required - names)
               if missing:
                   raise SystemExit("managed frontend package is missing: " + ", ".join(missing))
-              if any(name.startswith("System/") or name.startswith(".baseos/frontends/") for name in names):
-                  raise SystemExit("test ZIP still contains the legacy DATA-root install layout")
-              if not any(name.startswith("slot-rg353ps/payload/") for name in names):
-                  raise SystemExit("test ZIP has no managed frontend payload")
-              cores = [name for name in names if name.endswith("_libretro.so")]
-              if cores:
-                  raise SystemExit("test ZIP unexpectedly contains emulator cores: " + ", ".join(cores))
-              if "slot-rg353ps/CORE-PACK-SOURCE.txt" in names:
-                  raise SystemExit("test ZIP unexpectedly contains core-pack metadata")
-              if any(name.startswith("System/lib/") for name in names):
-                  raise SystemExit("test ZIP unexpectedly contains core runtime libraries")
+              profiles = sorted(
+                  name for name in names
+                  if name.startswith("slot-rg353ps/profiles/") and name.endswith(".conf")
+              )
+              if profiles != ["slot-rg353ps/profiles/640-native.conf"]:
+                  raise SystemExit(f"expected one default profile only, found: {profiles}")
+              core_names = {
+                  name.rsplit("/", 1)[-1] for name in names
+                  if name.startswith("slot-rg353ps/payload/System/")
+                  and name.endswith("_libretro.so")
+              }
+              missing_cores = sorted(required_cores - core_names)
+              if missing_cores:
+                  raise SystemExit("pinned core pack is missing: " + ", ".join(missing_cores))
+              runtime_libs = [
+                  name for name in names
+                  if name.startswith("slot-rg353ps/payload/System/lib/")
+                  and not name.endswith("/")
+              ]
+              if not runtime_libs:
+                  raise SystemExit("pinned core pack runtime libraries are missing")
+              licenses = [
+                  name for name in names
+                  if name.startswith("slot-rg353ps/payload/System/licenses/")
+                  and not name.endswith("/")
+              ]
+              if not licenses:
+                  raise SystemExit("core/source license files are missing")
               readme = zf.read("slot-rg353ps/README-RG353PS.txt").decode("utf-8")
-              if "intentionally excluded" not in readme:
-                  raise SystemExit("package README does not identify this as a core-free package")
-              if ".userdata/" not in readme or "time zone" not in readme or "selected_core.ini" not in readme:
-                  raise SystemExit("package README does not describe per-profile settings and core-choice persistence")
               info = zf.read("slot-rg353ps/BUILD-INFO.txt").decode("utf-8")
-              if "intentionally excluded" not in info:
-                  raise SystemExit("BUILD-INFO does not confirm the core-free package")
-              profiles = [name for name in names if name.startswith("slot-rg353ps/profiles/") and name.endswith(".conf")]
-              if len(profiles) != 2:
-                  raise SystemExit(f"expected two independent frontend profiles, found {len(profiles)}: {profiles}")
-              print(f"Verified core-free managed package with {len(profiles)} profiles: {archive} ({len(names)} members)")
+              for label, content in (("package README", readme), ("BUILD-INFO", info)):
+                  if "pinned RG353PS AArch64/musl core pack" not in content:
+                      raise SystemExit(f"{label} does not confirm the core pack is included")
+              if "intentionally excluded" in readme or "intentionally excluded" in info:
+                  raise SystemExit("package metadata incorrectly describes a core-free test ZIP")
+              print(
+                  f"Verified single-profile integration package with {len(required_cores)} cores, "
+                  f"{len(runtime_libs)} runtime libraries and {len(licenses)} license files: "
+                  f"{archive} ({len(names)} members)"
+              )
           PY
       - name: Upload Chinese test package and checksum
         uses: actions/upload-artifact@v4
         with:
-          name: luckluck-slot-rg353ps-640x480-test-zh-${{ github.run_number }}
+          name: luckluck-slot-rg353ps-640x480-integration-zh-${{ github.run_number }}
           path: |
             slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-test-${{ github.run_number }}-zh.zip
             slot/work/rg353ps/frontends/LUCKLUCK-SLOT-RG353PS-640x480-test-${{ github.run_number }}-zh.zip.sha256
