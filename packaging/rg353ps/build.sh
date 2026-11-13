@@ -173,8 +173,8 @@ docker run --rm --network host --platform linux/arm64 \
     grep -Fqx 'package_api=1' "$FRONTEND_PACKAGE/baseos-frontend.conf"
     test -s "$FRONTEND_PACKAGE/profiles/640-native.conf"
     test -s "$FRONTEND_PACKAGE/profiles/640-native-alt.conf"
-    grep -Fq '# baseos: volume-owned' "$FRONTEND_PACKAGE/launch.sh"
-    grep -Fq '# baseos: power-owned' "$FRONTEND_PACKAGE/launch.sh"
+    grep -Fq "# baseos: volume-owned" "$FRONTEND_PACKAGE/launch.sh"
+    grep -Fq "# baseos: power-owned" "$FRONTEND_PACKAGE/launch.sh"
 
     cp LICENSE "$SYSTEM/licenses/slot-LICENSE.txt"
     cp NOTICE.md "$SYSTEM/licenses/slot-NOTICE.md"
