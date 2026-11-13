@@ -163,11 +163,16 @@ docker run --rm --network host --platform linux/arm64 \
 
     cp /slot-port/launch.sh "$FRONTEND_PACKAGE/launch.sh"
     cp /slot-port/baseos-frontend.conf "$FRONTEND_PACKAGE/baseos-frontend.conf"
-    cp /slot-port/profiles/640-native.conf "$FRONTEND_PACKAGE/profiles/640-native.conf"
-    chmod 0644 "$FRONTEND_PACKAGE/baseos-frontend.conf" "$FRONTEND_PACKAGE/profiles/640-native.conf"
+    for profile_file in /slot-port/profiles/*.conf; do
+      [ -f "$profile_file" ] || continue
+      cp "$profile_file" "$FRONTEND_PACKAGE/profiles/"
+      grep -Fqx 'profile_api=1' "$FRONTEND_PACKAGE/profiles/${profile_file##*/}"
+    done
+    chmod 0644 "$FRONTEND_PACKAGE/baseos-frontend.conf" "$FRONTEND_PACKAGE"/profiles/*.conf
     sh -n "$FRONTEND_PACKAGE/launch.sh"
     grep -Fqx 'package_api=1' "$FRONTEND_PACKAGE/baseos-frontend.conf"
-    grep -Fqx 'profile_api=1' "$FRONTEND_PACKAGE/profiles/640-native.conf"
+    test -s "$FRONTEND_PACKAGE/profiles/640-native.conf"
+    test -s "$FRONTEND_PACKAGE/profiles/640-native-alt.conf"
     grep -Fq '# baseos: volume-owned' "$FRONTEND_PACKAGE/launch.sh"
     grep -Fq '# baseos: power-owned' "$FRONTEND_PACKAGE/launch.sh"
 
@@ -264,7 +269,10 @@ Install
 -------
 Extract the ZIP into the DATA partition's `Frontends/` directory. Do not
 merge the package into the DATA root and do not move individual files.
-BaseOS registers the `640-native` configuration automatically. Back up saves first.
+BaseOS registers both `640-native` and `640-native-alt` configurations
+automatically. They share the Slot executable and game/save folders but keep
+their `.userdata`, favorites, recent-played list and frontend settings
+separate. Back up saves first.
 Core handling: $CORE_INSTALL_NOTE
 The package contains its own `payload/System/slot` and UI resources. The launcher
 bind-mounts the shared DATA-root `Games/` and `Saves/` directories and keeps
