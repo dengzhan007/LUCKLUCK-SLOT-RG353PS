@@ -11,7 +11,7 @@
 > `66-mods-640` 源码树为基底（上游提交 `4a0b60189fb4e29e57e73de14d997260a2e9d3a1`），
 > 保留原生 640×480 合成画布和整套 640 布局。针对 RG353PS，打包时仅替换设备图形后端：
 > 使用 BaseOS 的 SDL2/KMSDRM + GLES2/Panfrost，不使用 H700 专用 EGL framebuffer 后端。
-> BaseOS 继续负责启动器、manifest 和 USB gadget；卡侧 MTP 辅助脚本启动钩子予以保留。
+> BaseOS 继续负责 package/profile 发现、启动器、选择器、电源/音量所有权和 USB gadget；卡侧 MTP 辅助脚本启动钩子予以保留。
 > 测试 CI 只构建简体中文版，正式标签分别构建中英文 RG353PS 完整包。每个完整包都整合固定版本的
 > AArch64/musl 模拟器核心、运行库和许可证/源码材料；核心来源为
 > [核心包 v1.0.0](https://github.com/dengzhan007/LUCKLUCK-SLOT-RG353PS/releases/tag/rg353ps-cores-aarch64-musl-v1.0.0)，不会在前端发布时重新编译。
@@ -44,6 +44,12 @@ LUCKLUCK SLOT（缩写 **66slot**）是运行在 **BaseOS** 上的多机种掌�
 一句话：它曾是“RG SP 上的 GBA 前端”，现在是运行在 BaseOS 上、覆盖 10 个机种的掌机前端，名叫 **LUCKLUCK SLOT（66slot）**。
 
 ## 关于本修改版
+
+本移植包使用 BaseOS **managed frontend package/profile API 1**（RG353PS BaseOS 1.2.10+）。它作为一个
+`Frontends/slot-rg353ps/` 程序包安装，提供 `640-native` 与 `640-native-alt` 两个配置档；
+两个配置档共用一个程序与资源包，但各自拥有独立设置、收藏、核心选择和即时存档。BaseOS 负责前端发现、
+默认启动、选择器和卸载；Slot 负责界面、游戏库与模拟器运行。
+
 
 LUCKLUCK SLOT 把一台 BaseOS 掌机变成一整排卡带。相对上游，它多了这些：
 
@@ -266,18 +272,43 @@ Emerald = gpsp
 
 ## 安装
 
-LUCKLUCK SLOT 运行在 **BaseOS** 上。BaseOS **同时支持单卡（TF1）与双卡（TF1 + TF2）** 两种布局——前端放在设备所采用的那种布局上即可；若存在第二张卡（TF2），它优先于第一张卡（TF1）。
+LUCKLUCK SLOT 运行在 **RG353PS BaseOS 1.2.10 或更新版本**上。此版本开始支持 managed frontend package/profile API 1；旧版 BaseOS 只能识别旧式 adapter，不能发现本包。
 
-1. 把适用于你设备的**最新 BaseOS 镜像**烧录到 SD 卡（参见 BaseOS 的安装说明）。
-2. **插入机器、开机一次，让首次启动完成**——BaseOS 会把数据分区扩展到整张卡。随后会显示“无前端”提示（这是正常的）。**首次开机前不要往卡里拷任何东西**——第 2 步是“建分区”，提前放进去的文件会被清空。
-3. 关机、拔卡、插到电脑上。会出现一个占满整张卡的卷（标为 `BASEOS`）。
-4. **把 [下载](#下载) 里的前端包解压到卡根。** 根层是 `System/`；`Games/`、`Labels/`、`Saves/`、`Cartridge/`、`Wallpapers/`、`Bootlogos/`、`Music/` 等目录**随发布包自带、已经建好**，不要自己手动新建。
-5. 把卡插回、开机，前端就启动了。
+1. 将适用于 RG353PS 的 BaseOS 镜像烧录到 SD 卡。
+2. 首次开机并等待 BaseOS 完成数据分区扩展。**首次启动前不要向卡里拷贝文件**，扩展过程可能重建数据分区。
+3. 关机，将卡连接电脑，打开用户数据卷（通常标为 `BASEOS`）。
+4. 在数据分区根目录创建 `Frontends/`（若不存在），把发布包解压到 `Frontends/` 中，并保留 ZIP 内的顶层目录。最终路径必须是 `Frontends/slot-rg353ps/baseos-frontend.conf`，不能把包内的 `payload/`、`profiles/` 等目录直接解压到卡根。
+5. ROM 放在数据分区根目录的 `Games/<机种>/`，电池存档放在 `Saves/`。不要把 ROM 或存档放进 `Frontends/slot-rg353ps/`。
+6. 安全弹出 SD 卡，插回掌机开机。BaseOS 会自动发现两个 Slot 配置档。
 
-跑起来之后，**在货架上长按 `B`**，同一网络下的电脑就能用 sftp 连上这张卡，不用拔。插 USB 线时卡还会应 MTP，资源管理器里直接显示成一个设备。
+BaseOS 支持 TF1 与 TF2 的前端发现，TF2 优先；本 RG353PS Slot 启动器把共享 ROM 和电池存档绑定到 BaseOS 的 TF1 数据根目录（`/mnt/SDCARD/Games` 与 `/mnt/SDCARD/Saves`）。首次部署建议将前端包和游戏数据都放在 TF1，以便管理和备份。
 
-（开发者：用 `python _tools/build_slot.py` 构建，用 `python _tools/deploy_bin.py` 经 adb 部署——它会把二进制推到 `System/slot`、`chmod`、清缓存并重启。或手动：`adb push System/slot /mnt/sdcard/System/slot && adb shell chmod 0755 /mnt/sdcard/System/slot && adb shell sync && adb reboot`。）
+### 双 Profile、默认启动与数据归属
 
+本包提供两个配置档：`640-native` 与 `640-native-alt`。它们共用同一个 Slot 可执行文件、UI 资源和核心文件，不会复制两套程序。开机时按住 **L1 或 R1** 进入 BaseOS 前端选择器（Function USB 存储请求优先）。
+
+- **A**：临时启动当前高亮配置，不修改默认项。
+- **START**：把当前配置设为默认并立即启动。
+- **B**：取消选择，按已保存的默认项继续启动。
+- **Y**：确认后仅删除当前 Profile。
+- **X**：确认后卸载整个 Slot 程序包。
+
+选择器顶部会显示 `DEFAULT STARTUP`，默认配置所在行带有 `[DEFAULT]`；若使用自动发现，则显示 `AUTO`。A 临时启动不会改变默认标记。
+
+| 数据 | 归属 |
+|---|---|
+| `Games/` ROM 游戏库 | 两个 Profile 及其他前端共享 |
+| `Saves/` 电池存档（`.sav` / `.srm`） | 共享 |
+| 模拟器核心文件 | 两个 Profile 共用一份程序/核心文件 |
+| 主题、时区、收藏和 Slot 偏好 | 每个 Profile 独立 |
+| `selected_core.ini` 核心选择 | 每个 Profile 独立 |
+| `States/` 即时存档/续玩状态 | 每个 Profile 独立 |
+
+Profile 用户数据保存在 `/mnt/SDCARD/.baseos/instances/slot-rg353ps--<profile-id>/`，与程序包目录分离。删除 Profile 或整个前端包不会删除这些实例数据、`Games/`、`Saves/` 或共享核心；重新安装相同 package ID 和 profile ID 后，会重新接入原有配置与即时存档。不要手动删除 `.baseos/instances/`，除非你确实要清空相应配置档的数据。
+
+测试 CI 包刻意不包含模拟器核心；正式完整包可包含固定版本的核心包。若使用 core-free 测试包，请先在支持的共享核心位置准备好 AArch64/musl 核心。
+
+运行后，**在货架上长按 `B`**，同一网络下的电脑可通过 SFTP 连接；插 USB 线时，BaseOS 也会提供 MTP 文件访问。
 ---
 
 ## 开机画面与开机片
