@@ -8,23 +8,27 @@ BASEOS_ROOT="${BASEOS_ROOT:-}"
 [ -n "$BASEOS_ROOT" ] || { echo "set BASEOS_ROOT to a BaseOS-RG353PS checkout" >&2; exit 2; }
 
 FRONTEND_PORT="$BASEOS_ROOT/platforms/rg353ps/frontends/slot"
-FRONTEND_MANIFEST="$FRONTEND_PORT/manifest.conf"
+FRONTEND_PACKAGE_MANIFEST="$FRONTEND_PORT/baseos-frontend.conf"
+FRONTEND_PROFILE="$FRONTEND_PORT/profiles/640-native.conf"
 FRONTEND_LAUNCHER="$FRONTEND_PORT/launch.sh"
-for file in "$FRONTEND_MANIFEST" "$FRONTEND_LAUNCHER" \
+for file in "$FRONTEND_PACKAGE_MANIFEST" "$FRONTEND_PROFILE" "$FRONTEND_LAUNCHER" \
             "$FRONTEND_PORT/fbdev.rs"; do
-  [ -f "$file" ] || { echo "missing RG353PS adapter input: $file" >&2; exit 1; }
+  [ -f "$file" ] || { echo "missing managed frontend package input: $file" >&2; exit 1; }
 done
 
-for declaration in adapter_api=1 volume_owner=frontend power_owner=frontend; do
-  grep -Fqx "$declaration" "$FRONTEND_MANIFEST" || {
-    echo "invalid adapter manifest (missing $declaration)" >&2; exit 1;
+for declaration in package_api=1 volume_owner=frontend power_owner=frontend; do
+  grep -Fqx "$declaration" "$FRONTEND_PACKAGE_MANIFEST" || {
+    echo "invalid package manifest (missing $declaration)" >&2; exit 1;
   }
 done
-PRIORITY="$(sed -n 's/^priority=//p' "$FRONTEND_MANIFEST")"
-case "$PRIORITY" in
-  ''|*[!0-9]*) echo "invalid adapter priority" >&2; exit 1 ;;
+grep -Fqx 'profile_api=1' "$FRONTEND_PROFILE" || {
+  echo "invalid frontend profile manifest" >&2; exit 1;
+}
+PACKAGE_PRIORITY="$(sed -n 's/^priority=//p' "$FRONTEND_PACKAGE_MANIFEST")"
+case "$PACKAGE_PRIORITY" in
+  ''|*[!0-9]*) echo "invalid package priority" >&2; exit 1 ;;
 esac
-[ "$PRIORITY" -le 9999 ] || { echo "adapter priority must be 0..9999" >&2; exit 1; }
+[ "$PACKAGE_PRIORITY" -le 9999 ] || { echo "package priority must be 0..9999" >&2; exit 1; }
 grep -Fqx '# baseos: volume-owned' "$FRONTEND_LAUNCHER"
 grep -Fqx '# baseos: power-owned' "$FRONTEND_LAUNCHER"
 
@@ -70,7 +74,7 @@ docker build --platform linux/arm64 -f "$HERE/Dockerfile" -t "$IMAGE" "$HERE"
 
 echo "== building RG353PS native-640x480 frontend ($LANGUAGE) =="
 echo "   slot: $SLOT_REPO @ $SLOT_REV ($SLOT_BRANCH)"
-echo "   BaseOS adapter: dengzhan007/BaseOS-RG353PS @ $BASEOS_REF"
+echo "   BaseOS package adapter: dengzhan007/BaseOS-RG353PS @ $BASEOS_REF"
 docker run --rm --network host --platform linux/arm64 \
   -e "SLOT_REV=$SLOT_REV" \
   -e "SLOT_BRANCH=$SLOT_BRANCH" \
@@ -96,6 +100,9 @@ docker run --rm --network host --platform linux/arm64 \
     SRC=/tmp/slot-src
     TARGET=/cargo-target
     PKG=/tmp/package
+    FRONTEND_PACKAGE="$PKG/slot-rg353ps"
+    PAYLOAD="$FRONTEND_PACKAGE/payload"
+    SYSTEM="$PAYLOAD/System"
     LANGUAGE="${LANGUAGE:-zh}"
     PACKAGE_TAG="${PACKAGE_TAG:-test}"
     SLOT_REPO="${SLOT_REPO:-dengzhan007/LUCKLUCK-SLOT-RG353PS}"
@@ -122,7 +129,7 @@ docker run --rm --network host --platform linux/arm64 \
     fi
 
     rm -rf "$SRC" "$PKG"
-    mkdir -p "$SRC" "$PKG"
+    mkdir -p "$SRC" "$SYSTEM/licenses" "$FRONTEND_PACKAGE/profiles"
     echo "[rg353ps] staging source"
     cp -R /slot-up/. "$SRC/"
     echo "[rg353ps] source staged"
@@ -146,62 +153,54 @@ docker run --rm --network host --platform linux/arm64 \
     readelf -h "$BIN" | grep -q "AArch64"
     readelf -l "$BIN" | grep -q "ld-musl-aarch64.so.1"
 
-    mkdir -p "$PKG/System/licenses" \
-      "$PKG/.baseos/frontends/slot" "$PKG/baseos/frontends/slot"
-    cp "$BIN" "$PKG/System/slot"
-    chmod 0755 "$PKG/System/slot"
+    cp "$BIN" "$SYSTEM/slot"
+    chmod 0755 "$SYSTEM/slot"
     # Use the upstream card-side script. BaseOS initializes wlan0; Slot owns
     # association, saved credentials and DHCP as it does on the upstream release.
-    cp /upstream-assets/System/slotnet.sh "$PKG/System/slotnet.sh"
-    chmod 0755 "$PKG/System/slotnet.sh"
-    sh -n "$PKG/System/slotnet.sh"
+    cp /upstream-assets/System/slotnet.sh "$SYSTEM/slotnet.sh"
+    chmod 0755 "$SYSTEM/slotnet.sh"
+    sh -n "$SYSTEM/slotnet.sh"
 
-    cp /slot-port/launch.sh "$PKG/.baseos/frontends/slot/launch.sh"
-    cp /slot-port/launch.sh "$PKG/baseos/frontends/slot/launch.sh"
-    chmod 0755 "$PKG/.baseos/frontends/slot/launch.sh" "$PKG/baseos/frontends/slot/launch.sh"
-    cp /slot-port/manifest.conf "$PKG/.baseos/frontends/slot/manifest.conf"
-    cp /slot-port/manifest.conf "$PKG/baseos/frontends/slot/manifest.conf"
-    chmod 0644 "$PKG/.baseos/frontends/slot/manifest.conf" "$PKG/baseos/frontends/slot/manifest.conf"
-    cmp -s "$PKG/.baseos/frontends/slot/manifest.conf" "$PKG/baseos/frontends/slot/manifest.conf"
+    cp /slot-port/launch.sh "$FRONTEND_PACKAGE/launch.sh"
+    cp /slot-port/baseos-frontend.conf "$FRONTEND_PACKAGE/baseos-frontend.conf"
+    cp /slot-port/profiles/640-native.conf "$FRONTEND_PACKAGE/profiles/640-native.conf"
+    chmod 0644 "$FRONTEND_PACKAGE/baseos-frontend.conf" "$FRONTEND_PACKAGE/profiles/640-native.conf"
+    sh -n "$FRONTEND_PACKAGE/launch.sh"
+    grep -Fqx 'package_api=1' "$FRONTEND_PACKAGE/baseos-frontend.conf"
+    grep -Fqx 'profile_api=1' "$FRONTEND_PACKAGE/profiles/640-native.conf"
+    grep -Fq '# baseos: volume-owned' "$FRONTEND_PACKAGE/launch.sh"
+    grep -Fq '# baseos: power-owned' "$FRONTEND_PACKAGE/launch.sh"
 
-    for declaration in adapter_api=1 volume_owner=frontend power_owner=frontend; do
-      grep -Fqx "$declaration" "$PKG/.baseos/frontends/slot/manifest.conf"
-    done
-    grep -Fqx "# baseos: volume-owned" "$PKG/.baseos/frontends/slot/launch.sh"
-    grep -Fqx "# baseos: power-owned" "$PKG/.baseos/frontends/slot/launch.sh"
-    grep -Fqx "# baseos: volume-owned" "$PKG/baseos/frontends/slot/launch.sh"
-    grep -Fqx "# baseos: power-owned" "$PKG/baseos/frontends/slot/launch.sh"
-
-    cp LICENSE "$PKG/System/licenses/slot-LICENSE.txt"
-    cp NOTICE.md "$PKG/System/licenses/slot-NOTICE.md"
+    cp LICENSE "$SYSTEM/licenses/slot-LICENSE.txt"
+    cp NOTICE.md "$SYSTEM/licenses/slot-NOTICE.md"
     for license in crates/slot-ui/assets/*.LICENSE.txt crates/slot-ui/assets/*.OFL.txt; do
-      [ -f "$license" ] && cp "$license" "$PKG/System/licenses/"
+      [ -f "$license" ] && cp "$license" "$SYSTEM/licenses/"
     done
-    tar --exclude=.git -czf "$PKG/System/licenses/slot-rg353ps-$SLOT_REV-source.tar.gz" -C "$SRC" .
-    "$PKG/System/slot" --init-root "$PKG"
+    tar --exclude=.git -czf "$SYSTEM/licenses/slot-rg353ps-$SLOT_REV-source.tar.gz" -C "$SRC" .
+    "$SYSTEM/slot" --init-root "$PAYLOAD"
 
     # The upstream 640 release carries the UI resources as external card files.
     # Import only those data assets; retain the native RG353PS binary and never
     # replace separately provisioned libretro cores.
-    cp -a /upstream-assets/System/Carts "$PKG/System/"
-    cp -a /upstream-assets/System/fonts "$PKG/System/"
-    test -n "$(find "$PKG/System/fonts" -maxdepth 1 -type f \( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \) -print -quit)"
-    test -s "$PKG/System/slotnet.sh"
+    cp -a /upstream-assets/System/Carts "$SYSTEM/"
+    cp -a /upstream-assets/System/fonts "$SYSTEM/"
+    test -n "$(find "$SYSTEM/fonts" -maxdepth 1 -type f \( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.ttc' \) -print -quit)"
+    test -s "$SYSTEM/slotnet.sh"
     for asset_dir in Music Overlay Bootlogos; do
       test -d "/upstream-assets/$asset_dir"
-      cp -a "/upstream-assets/$asset_dir" "$PKG/"
+      cp -a "/upstream-assets/$asset_dir" "$PAYLOAD/"
     done
     if [ -s /upstream-assets/System/boot_opening.slotvid ]; then
-      cp -a /upstream-assets/System/boot_opening.slotvid "$PKG/System/"
+      cp -a /upstream-assets/System/boot_opening.slotvid "$SYSTEM/"
     fi
-    cp /upstream-assets/UPSTREAM-ASSET-SOURCE.txt "$PKG/"
+    cp /upstream-assets/UPSTREAM-ASSET-SOURCE.txt "$FRONTEND_PACKAGE/"
     # Full releases reuse the separately validated core pack. The frontend test
     # package skips staging and merging it entirely, so no emulator libraries ship.
     if [ "$INCLUDE_CORE_PACK" = yes ]; then
-      cp -a /upstream-assets/CorePack/System/. "$PKG/System/"
-      cp /upstream-assets/CorePack/CORE-PACK-SOURCE.txt "$PKG/"
+      cp -a /upstream-assets/CorePack/System/. "$SYSTEM/"
+      cp /upstream-assets/CorePack/CORE-PACK-SOURCE.txt "$FRONTEND_PACKAGE/"
       for core in mgba gpsp fceumm supafaust fbneo genesis_plus_gx pcsx_rearmed pce_fast; do
-        test -s "$PKG/System/${core}_libretro.so"
+        test -s "$SYSTEM/${core}_libretro.so"
       done
       CORE_PACKAGE_NOTE="The pinned RG353PS AArch64/musl core pack is included; it is reused byte-for-byte and is not rebuilt."
       CORE_INSTALL_NOTE="The pinned core-pack files update matching System/*_libretro.so and System/lib/ entries; unmatched existing files remain."
@@ -212,39 +211,40 @@ docker run --rm --network host --platform linux/arm64 \
         echo "frontend-only package unexpectedly contains a libretro core" >&2
         exit 1
       fi
-      test ! -e "$PKG/CORE-PACK-SOURCE.txt"
-      test ! -d "$PKG/System/lib"
+      test ! -e "$FRONTEND_PACKAGE/CORE-PACK-SOURCE.txt"
+      test ! -d "$SYSTEM/lib"
     fi
 
     # Catch an incomplete distribution package before it reaches the SD card.
     for machine in GBA GB GBC SFC FC NEOGEO ARCADE MD PS1 PCE; do
-      test -s "$PKG/System/Carts/SLOT_SYS_$machine.png"
+      test -s "$SYSTEM/Carts/SLOT_SYS_$machine.png"
     done
     # The PS1 insert animation uses this branded disc when a game has no custom art.
-    test -s "$PKG/System/Carts/66SLOT_DISC_PS1.png"
+    test -s "$SYSTEM/Carts/66SLOT_DISC_PS1.png"
     for icon in type_gb.png type_gbc.png type_gba.png \
                 type_gb_light.png type_gbc_light.png type_gba_light.png; do
-      test -s "$PKG/System/Carts/$icon"
+      test -s "$SYSTEM/Carts/$icon"
     done
-    test -s "$PKG/Music/Fonts/unifont-16px.otf"
-    test -s "$PKG/Music/Fonts/press-start-2p.ttf"
+    test -s "$PAYLOAD/Music/Fonts/unifont-16px.otf"
+    test -s "$PAYLOAD/Music/Fonts/press-start-2p.ttf"
     # Check that asset staging and package copying preserve exact font bytes.
-    cmp -s /upstream-assets/System/fonts/Plix-Bold.otf "$PKG/System/fonts/Plix-Bold.otf"
-    cmp -s /upstream-assets/Music/Fonts/unifont-16px.otf "$PKG/Music/Fonts/unifont-16px.otf"
-    cmp -s /upstream-assets/Music/Fonts/press-start-2p.ttf "$PKG/Music/Fonts/press-start-2p.ttf"
-    test -d "$PKG/Overlay"
-    test -d "$PKG/Bootlogos"
+    cmp -s /upstream-assets/System/fonts/Plix-Bold.otf "$SYSTEM/fonts/Plix-Bold.otf"
+    cmp -s /upstream-assets/Music/Fonts/unifont-16px.otf "$PAYLOAD/Music/Fonts/unifont-16px.otf"
+    cmp -s /upstream-assets/Music/Fonts/press-start-2p.ttf "$PAYLOAD/Music/Fonts/press-start-2p.ttf"
+    test -d "$PAYLOAD/Overlay"
+    test -d "$PAYLOAD/Bootlogos"
 
-    cat > "$PKG/README-RG353PS.txt" <<EOF
+    cat > "$FRONTEND_PACKAGE/README-RG353PS.txt" <<EOF
 LUCKLUCK SLOT / 66slot - RG353PS 640x480 ${LANGUAGE} build
 ========================================================
 
 Target: Anbernic RG353PS / RK3566 / 640x480 panel / BaseOS
 Language: $LANGUAGE ($LANGUAGE_NAME)
 Display: SDL2 KMSDRM fullscreen + OpenGL ES; not the upstream Mali fbdev EGL path.
-This package contains the RG353PS frontend executable, BaseOS adapter,
-and the upstream UI art/font bundle: System/Carts/, System/fonts/, Music/, Overlay/ and
-Bootlogos/. It also uses the upstream System/slotnet.sh, so Slot owns Wi-Fi
+This archive has one top-level `slot-rg353ps/` folder. Extract it directly
+into DATA/Frontends/; BaseOS discovers it as one managed frontend package.
+It contains the RG353PS executable and the UI art/font bundle inside payload/:
+System/Carts/, System/fonts/, Music/, Overlay/ and Bootlogos/. It also uses the upstream System/slotnet.sh, so Slot owns Wi-Fi
 credentials, association and DHCP while BaseOS only initializes the radio. The main artwork is pinned to the upstream 640x480 v2026.11.09
 release. That package omits six legacy GB/GBC/GBA theme marks still read by
 this frontend; only those six type_*.png files are supplemented from the
@@ -262,12 +262,15 @@ the boot-opening video audio.
 
 Install
 -------
-Extract this ZIP into the root of the same user-data partition that contains
-your Games and System directories. Merge the directories. Back up saves first.
+Extract the ZIP into the DATA partition's `Frontends/` directory. Do not
+merge the package into the DATA root and do not move individual files.
+BaseOS registers the `640-native` configuration automatically. Back up saves first.
 Core handling: $CORE_INSTALL_NOTE
-The package replaces System/slot and installs Slot adapter and default UI asset files.
-Before updating an existing customised card, back up System/Carts/, System/fonts/, Overlay/,
-Bootlogos/ and Music/Fonts/; matching paths in the package may overwrite them.
+The package contains its own `payload/System/slot` and UI resources. The launcher
+bind-mounts the shared DATA-root `Games/` and `Saves/` directories and keeps
+Slot's `.userdata` under its BaseOS profile instance. Existing shared cores in
+the DATA-root `System/` directory are exposed to the profile when present.
+Back up customised UI resources before replacing this package.
 
 Resolution
 ----------
@@ -282,7 +285,7 @@ boot-to-frontend, screen geometry, button mapping, audio, sleep/wake and game
 launch separately. A successful compile does not prove hardware operation.
 EOF
 
-    cat > "$PKG/BUILD-INFO.txt" <<EOF
+    cat > "$FRONTEND_PACKAGE/BUILD-INFO.txt" <<EOF
 Slot repository: $SLOT_REPO
 Slot branch: $SLOT_BRANCH
 Slot source commit: $SLOT_REV
