@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-pub const SELECTED_CORE_FILE: &str = "System/selected_core.ini";
+/// New per-profile location. Keep this below the directory-mounted userdata
+/// tree because the writer uses atomic rename.
+pub const SELECTED_CORE_FILE: &str = ".userdata/selected_core.ini";
+const LEGACY_SELECTED_CORE_FILE: &str = "System/selected_core.ini";
 
 /// Which emulator runs a cart. mGBA is the whole product's default; gpSP exists for the
 /// serial hardware mGBA's libretro build does not carry. Snes / Nes are the console cores.
@@ -119,9 +122,15 @@ impl Core {
 /// Every malformed line is skipped rather than raised. This file is edited by hand on a
 /// card, and the cost of a typo must be that one cart opens with the default core, never
 /// that the shelf fails to load.
+fn read_selected_core_text(root: &Path) -> Option<String> {
+    std::fs::read_to_string(root.join(SELECTED_CORE_FILE))
+        .or_else(|_| std::fs::read_to_string(root.join(LEGACY_SELECTED_CORE_FILE)))
+        .ok()
+}
+
 pub fn read_selected_cores(root: &Path) -> HashMap<String, Core> {
     let mut out = HashMap::new();
-    let Ok(text) = std::fs::read_to_string(root.join(SELECTED_CORE_FILE)) else {
+    let Some(text) = read_selected_core_text(root) else {
         return out;
     };
     for line in text.lines() {
@@ -167,7 +176,9 @@ pub fn core_for(root: &Path, stem: &str) -> Core {
 /// line in it — including the note somebody wrote to themselves above a cart.
 pub fn write_selected_core(root: &Path, stem: &str, core: Core) -> std::io::Result<()> {
     let path = root.join(SELECTED_CORE_FILE);
-    let existing = std::fs::read_to_string(&path).unwrap_or_default();
+    // Read legacy System/ content as a migration source so hand-written
+    // comments and selections survive the first write after this path change.
+    let existing = read_selected_core_text(root).unwrap_or_default();
 
     let entry = format!("{stem} = {}", core.as_str());
     let mut out = String::with_capacity(existing.len() + entry.len() + 1);
